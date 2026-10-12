@@ -1,12 +1,13 @@
 // Сантехкомплект — service worker: работа без интернета.
 // При КАЖДОЙ выкладке увеличивайте VERSION: без этого телефоны не получат новую версию.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CORE = 'santeh-core-' + VERSION;
 const LIBS = 'santeh-libs-v1';
 
 const CORE_FILES = [
   './',
   './index.html',
+  './install.html',
   './platform.js',
   './app.js',
   './styles.css',
@@ -55,9 +56,11 @@ self.addEventListener('fetch', event => {
   // Страница и файлы приложения отдаются из кэша своей версии целиком, чтобы
   // новая index.html никогда не встретилась со старым app.js. Новая версия
   // приходит только через обновление sw.js (плашка «Обновить» в приложении).
+  // Каждая страница отдаётся сама (index.html, install.html); незнакомый адрес — приложение.
   if (req.mode === 'navigate') {
     event.respondWith(
-      caches.open(CORE).then(c => c.match('./index.html')).then(hit => hit || fetch(req))
+      caches.open(CORE).then(c => c.match(req, { ignoreSearch: true })
+        .then(hit => hit || fetch(req).catch(() => c.match('./index.html'))))
     );
     return;
   }

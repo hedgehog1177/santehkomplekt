@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Установка Сантехкомплекта</title>
+<meta name="description" content="Как установить приложение «Сантехкомплект» на телефон Xiaomi и другие Android">
+<meta name="theme-color" content="#0d5f80" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16222a" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<script src="platform.js"></script>
+<style>
+/* Пошаговая инструкция для телефона: крупный текст, один столбец, шаги-карточки с номером */
+:root {
+  --bg: #eef2f4; --surface: #ffffff; --surface-2: #f6f8f9; --fg: #13222c; --muted: #5a6b76; --line: #d8e0e5;
+  --water: #0d5f80; --water-fg: #ffffff; --water-soft: #e1eff5; --brass: #8a5a08; --brass-soft: #fbefd6;
+  --ok: #1f7a3d; --ok-soft: #e2f3e7; --warn: #9a5b00; --warn-soft: #fdf0d9;
+  --font-ui: "Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mark: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e161b; --surface: #16222a; --surface-2: #1b2932; --fg: #e5edf1; --muted: #93a5b0; --line: #283a45;
+    --water: #4fb2d8; --water-fg: #06212d; --water-soft: #173544; --brass: #e3ac45; --brass-soft: #3a2c12;
+    --ok: #6fd08f; --ok-soft: #163323; --warn: #f0b45a; --warn-soft: #3a2a12;
+  }
+}
+* { box-sizing: border-box; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 17px; line-height: 1.5; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--water); outline-offset: 2px; }
+.wrap { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: grid; gap: 16px; }
+header { display: flex; gap: 14px; align-items: center; }
+header img { width: 64px; height: 64px; border-radius: 16px; flex: none; }
+h1 { margin: 0; font-size: 26px; line-height: 1.15; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); }
+.note { border-radius: 14px; padding: 14px 16px; display: grid; gap: 10px; }
+.note.warn { background: var(--warn-soft); }
+.note.ok { background: var(--ok-soft); }
+.note p { margin: 0; }
+.note b { color: var(--fg); }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 10px; }
+.step h2 { margin: 0; font-size: 19px; display: flex; gap: 12px; align-items: center; text-wrap: balance; }
+.num { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--water); color: var(--water-fg); display: grid; place-items: center; font-weight: 700; font-size: 17px; }
+.step p { margin: 0; }
+.step ol, .step ul { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+.why { color: var(--muted); font-size: 15px; }
+.tap { font-weight: 600; background: var(--water-soft); color: var(--water); padding: 0 6px; border-radius: 6px; white-space: nowrap; }
+.addr { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+.addr code { flex: 1 1 220px; min-width: 0; font-family: var(--font-mark); font-size: 16px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; word-break: break-all; user-select: all; -webkit-user-select: all; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 12px; padding: 12px 16px; font: inherit; font-weight: 600; font-size: 16px; text-align: center; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.btn.primary { background: var(--water); border-color: var(--water); color: var(--water-fg); }
+.btn.block { width: 100%; padding: 15px; font-size: 17px; }
+.icon-sample { display: flex; gap: 12px; align-items: center; }
+.icon-sample img { width: 48px; height: 48px; border-radius: 12px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 0 16px; }
+details summary { cursor: pointer; padding: 14px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+details summary::-webkit-details-marker { display: none; }
+details summary::after { content: "+"; color: var(--muted); font-size: 22px; line-height: 1; }
+details[open] summary::after { content: "−"; }
+details > div { padding: 0 0 14px; display: grid; gap: 8px; }
+details p { margin: 0; }
+h2.part { margin: 12px 0 0; font-size: 20px; }
+.facts { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 15px; max-width: calc(100% - 32px); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="icons/icon-192.png" alt="">
+    <div>
+      <h1>Как установить «Сантехкомплект»</h1>
+      <p class="lede">5 шагов, около 5 минут. Нужен интернет — только на время установки.</p>
+    </div>
+  </header>
+
+  <div class="note ok" id="installed" hidden>
+    <p><b>Приложение уже установлено.</b> Вы открыли эту страницу из него. Ничего делать не нужно.</p>
+    <a class="btn primary block" href="./">Вернуться к каталогу</a>
+  </div>
+
+  <div class="note warn" id="not-chrome" hidden>
+    <p><b>Эта страница открыта не в Chrome.</b> Установить приложение отсюда не получится. Скопируйте адрес и откройте его в Chrome (шаг 3).</p>
+    <button type="button" class="btn primary block" data-copy>Скопировать адрес</button>
+  </div>
+
+  <section class="step">
+    <h2><span class="num">1</span>Проверьте, что есть Google Chrome</h2>
+    <p>Найдите на телефоне значок Chrome — круглый, красно-жёлто-зелёный. На Xiaomi он обычно лежит в папке «Google».</p>
+    <ul>
+      <li>Если Chrome нет: откройте <span class="tap">Play Маркет</span>, в поиске напишите «Chrome» и нажмите <span class="tap">Установить</span>.</li>
+      <li>Если в Play Маркете у Chrome есть кнопка <span class="tap">Обновить</span> — нажмите её.</li>
+    </ul>
+  </section>
+
+  <section class="step">
+    <h2><span class="num">2</span>Разрешите Chrome добавлять значки</h2>
+    <p class="why">На телефонах Xiaomi без этого разрешения значок приложения не появится на рабочем столе.</p>
+    <ol>
+      <li>Откройте <span class="tap">Настройки</span> (серая шестерёнка).</li>
+      <li><span class="tap">Приложения</span> → <span class="tap">Все приложения</span> (или «Управление приложениями»).</li>
+      <li>Найдите в списке <span class="tap">Chrome</span> и нажмите на него.</li>
+      <li><span class="tap">Другие разрешения</span>.</li>
+      <li><span class="tap">Ярлыки на рабочем столе</span> → <span class="tap">Разрешить</span>.</li>
+    </ol>
+    <p class="why">На телефонах других марок этого пункта может не быть — тогда просто переходите к шагу 3.</p>
+  </section>
+
+  <section class="step">
+    <h2><span class="num">3</span>Откройте приложение в Chrome</h2>
+    <p>Важно: именно в Chrome, а не в Telegram и не в «Браузере Mi».</p>
+    <ol>
+      <li>Откройте Chrome.</li>
+      <li>Нажмите на строку адреса вверху.</li>
+      <li>Введите адрес:</li>
+    </ol>
+    <div class="addr">
+      <code id="addr">hedgehog1177.github.io/santehkomplekt</code>
+      <button type="button" class="btn" data-copy>Копировать</button>
+    </div>
+    <ol start="4">
+      <li>Нажмите на клавиатуре стрелку или <span class="tap">Перейти</span>. Откроется каталог запчастей.</li>
+    </ol>
+  </section>
+
+  <section class="step">
+    <h2><span class="num">4</span>Установите</h2>
+    <div id="install-now" hidden>
+      <p>Chrome готов установить приложение прямо сейчас:</p>
+      <button type="button" class="btn primary block" id="b-install">Установить приложение</button>
+    </div>
+    <p>Подождите 5–10 секунд. Вверху появится плашка «Установите приложение на главный экран». Нажмите <span class="tap">Установить</span>, затем в окошке ещё раз <span class="tap">Установить</span>.</p>
+    <p><b>Если плашки нет:</b> нажмите три точки <span class="tap">⋮</span> справа вверху → <span class="tap">Установить приложение</span> (или «Добавить на главный экран») → <span class="tap">Установить</span>.</p>
+    <ul>
+      <li>Телефон спросит разрешение добавить ярлык — нажмите <span class="tap">Разрешить</span>.</li>
+      <li>Предлагают выбор «Установить» или «Создать ярлык» — выбирайте <span class="tap">Установить</span>.</li>
+    </ul>
+    <p>Подождите до 30 секунд — значок появится сам.</p>
+  </section>
+
+  <section class="step">
+    <h2><span class="num">5</span>Проверьте, что всё получилось</h2>
+    <div class="icon-sample">
+      <img src="icons/icon-192.png" alt="Значок приложения: латунный тройник на синем фоне">
+      <p>Найдите на рабочем столе значок «Сантехкомплект». Если его не видно, пролистайте все экраны вправо.</p>
+    </div>
+    <ol>
+      <li>Нажмите на значок. Приложение откроется на весь экран, без адресной строки сверху.</li>
+      <li>Для проверки включите режим полёта и откройте приложение снова — оно должно работать.</li>
+    </ol>
+  </section>
+
+  <h2 class="part">Если что-то пошло не так</h2>
+  <details>
+    <summary>Нет ни плашки, ни пункта «Установить приложение»</summary>
+    <div>
+      <p>Скорее всего, страница открыта не в Chrome. Повторите шаг 3.</p>
+      <p>Ещё можно потянуть страницу вниз, чтобы обновить её, и подождать 10 секунд.</p>
+      <p>Проверьте, что Chrome обновлён (шаг 1).</p>
+    </div>
+  </details>
+  <details>
+    <summary>Нажал «Установить», а значка нет</summary>
+    <div>
+      <p>Проверьте шаг 2 — разрешение «Ярлыки на рабочем столе».</p>
+      <p>Пролистайте все экраны рабочего стола. Если на телефоне включено меню приложений, поищите там.</p>
+    </div>
+  </details>
+  <details>
+    <summary>На значке маленький значок Chrome в углу</summary>
+    <div>
+      <p>Получился ярлык, а не приложение. Удалите его: долгое нажатие на значок → «Удалить».</p>
+      <p>Проверьте шаг 2 и установите снова через ⋮ → «Установить приложение».</p>
+    </div>
+  </details>
+  <details>
+    <summary>«Нет подключения к интернету» при первом открытии</summary>
+    <div>
+      <p>Включите мобильный интернет или Wi-Fi. Без него приложение не скачается. После установки интернет уже не нужен.</p>
+    </div>
+  </details>
+
+  <h2 class="part">Важно знать</h2>
+  <ul class="facts">
+    <li>Списки хранятся только на этом телефоне.</li>
+    <li>Не нажимайте у Chrome «Очистить все данные» в настройках — списки удалятся. Обычная «Очистка» мусора на Xiaomi безопасна.</li>
+    <li>Чтобы не потерять списки, иногда сохраняйте копию: в приложении «Объект ▾» → «Сохранить в файл».</li>
+    <li>Когда выйдет новая версия, в приложении появится плашка «Доступна новая версия» — нажмите «Обновить».</li>
+    <li>Удалить приложение: долгое нажатие на значок → «Удалить».</li>
+  </ul>
+
+  <a class="btn primary block" href="./">Открыть приложение</a>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+  var ADDR = 'https://hedgehog1177.github.io/santehkomplekt/';
+  var ua = navigator.userAgent;
+  var standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  // Встроенные браузеры Telegram, WhatsApp, Mi Browser и другие WebView не умеют устанавливать приложения
+  var inApp = /MiuiBrowser|Telegram|WhatsApp|Instagram|FBAN|FBAV|; wv\)|YaBrowser|SamsungBrowser/i.test(ua);
+  if (standalone) document.getElementById('installed').hidden = false;
+  else if (inApp) document.getElementById('not-chrome').hidden = false;
+
+  var toastEl = document.getElementById('toast'), t = 0;
+  function say(s) { toastEl.textContent = s; toastEl.hidden = false; clearTimeout(t); t = setTimeout(function () { toastEl.hidden = true; }, 2600); }
+  function selectAddr() {
+    var r = document.createRange(); r.selectNodeContents(document.getElementById('addr'));
+    var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  }
+  document.querySelectorAll('[data-copy]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      Platform.copyText(ADDR).then(function (ok) {
+        if (ok) say('Адрес скопирован. Вставьте его в строку адреса Chrome.');
+        else { selectAddr(); say('Адрес выделен — скопируйте его вручную.'); }
+      });
+    });
+  });
+
+  if (!standalone && window.Platform) {
+    Platform.onInstallChange(function (can) { document.getElementById('install-now').hidden = !can; });
+    document.getElementById('b-install').addEventListener('click', function () { Platform.install(); });
+  }
+})();
+</script>
+</body>
+</html>
