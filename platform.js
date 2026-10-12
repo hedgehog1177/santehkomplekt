@@ -8,6 +8,7 @@
  *   Platform.kind                      'web' | 'android'
  *   Platform.storage.get(key)          строка или null
  *   Platform.storage.set(key, value)   true, если сохранено
+ *   Platform.storage.onExternalChange(key, cb)  cb при изменении в другой вкладке, возвращает отписку
  *   Platform.requestPersistence()      просит браузер не удалять данные при нехватке места
  *   Platform.copyText(text)            true, если скопировано
  *   Platform.canShareText              есть ли системное меню «Поделиться»
@@ -16,8 +17,11 @@
  *   Platform.setBackHandler(fn|null)   пока задан fn, кнопка «Назад» вызывает его
  *   Platform.onInstallChange(cb)       cb(можно ли установить), возвращает отписку
  *   Platform.install()                 показывает системное окно установки
- *   Platform.onUpdateChange(cb)        cb(есть ли новая версия), возвращает отписку
- *   Platform.applyUpdate()             переходит на новую версию
+ *   Platform.wasUpdated()              true один раз после автоматического обновления
+ *
+ * Обновления в PWA автоматические: новая версия включается сама и страница
+ * перезагружается. Если открыто окно (задан обработчик «Назад»), перезагрузка
+ * ждёт, пока его закроют, чтобы не потерять введённое.
  */
 (function () {
   'use strict';
@@ -32,6 +36,12 @@
   const storage = {
     get(key) { try { return localStorage.getItem(key); } catch (e) { return null; } },
     set(key, value) { try { localStorage.setItem(key, value); return true; } catch (e) { return false; } },
+    // Значение изменили в другой вкладке этого же сайта (в Android-приложении вкладка одна — не сработает)
+    onExternalChange(key, cb) {
+      const h = e => { if (e.key === key) cb(e.newValue); };
+      window.addEventListener('storage', h);
+      return () => window.removeEventListener('storage', h);
+    },
   };
 
   function requestPersistence() {
@@ -51,11 +61,25 @@
 
   /* ---------- Браузер (PWA) ---------- */
 
+  const UPDATED_KEY = 'santeh.updated';
+  function wasUpdated() {
+    const v = storage.get(UPDATED_KEY);
+    if (v) storage.set(UPDATED_KEY, '');
+    return !!v;
+  }
+
   function makeWeb() {
     const installable = signal(false);
-    const updateReady = signal(false);
     let installEvt = null;
-    let waitingReg = null;
+    let backFn = null;
+    let trapped = false;
+    let ignorePop = false;
+    let updatePending = false;
+
+    function reloadForUpdate() {
+      storage.set(UPDATED_KEY, '1');
+      location.reload();
+    }
 
     window.addEventListener('beforeinstallprompt', e => {
       e.preventDefault();
@@ -67,32 +91,21 @@
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
         const hadController = !!navigator.serviceWorker.controller;
-        const ready = reg => { waitingReg = reg; updateReady.set(true); };
         navigator.serviceWorker.register('sw.js').then(reg => {
-          if (reg.waiting && hadController) ready(reg);
-          reg.addEventListener('updatefound', () => {
-            const w = reg.installing;
-            if (!w) return;
-            w.addEventListener('statechange', () => {
-              if (w.state === 'installed' && navigator.serviceWorker.controller) ready(reg);
-            });
-          });
           setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
         }).catch(() => { /* без офлайн-режима приложение всё равно работает */ });
-        let reloaded = false;
+        // Новая версия взяла управление страницей — перезагружаемся на неё.
+        // При первой установке (страница ещё без service worker) перезагрузка не нужна.
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (!hadController || reloaded) return;
-          reloaded = true;
-          location.reload();
+          if (!hadController || updatePending) return;
+          updatePending = true;
+          if (!backFn) reloadForUpdate();
         });
       });
     }
 
     // Кнопка «Назад» на Android в PWA — это шаг назад по истории.
     // Пока открыто окно, держим в истории лишнюю запись и перехватываем её.
-    let backFn = null;
-    let trapped = false;
-    let ignorePop = false;
     window.addEventListener('popstate', () => {
       if (ignorePop) { ignorePop = false; return; }
       if (!trapped) return;
@@ -111,6 +124,8 @@
         ignorePop = true;
         history.back();
       }
+      // Окно закрыли, а обновление ждало — теперь можно перезагрузиться
+      if (!fn && updatePending) setTimeout(reloadForUpdate, 100);
     }
 
     function download(blob, filename) {
@@ -154,11 +169,7 @@
         installEvt = null;
         installable.set(false);
       },
-      onUpdateChange: updateReady.on,
-      applyUpdate() {
-        if (waitingReg && waitingReg.waiting) waitingReg.waiting.postMessage('skipWaiting');
-        else location.reload();
-      },
+      wasUpdated,
     };
   }
 
@@ -216,8 +227,7 @@
       setBackHandler(fn) { backFn = fn || null; },
       onInstallChange: off,   // приложение уже установлено
       install() {},
-      onUpdateChange: off,    // обновление — новой версией APK
-      applyUpdate() {},
+      wasUpdated: () => false, // обновление — новой версией APK
     };
   }
 

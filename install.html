@@ -38,7 +38,8 @@ body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--fo
 .wrap { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: grid; gap: 16px; }
 header { display: flex; gap: 14px; align-items: center; }
 header img { width: 64px; height: 64px; border-radius: 16px; flex: none; }
-h1 { margin: 0; font-size: 26px; line-height: 1.15; text-wrap: balance; }
+h1 { margin: 0; font-size: clamp(21px, 6vw, 26px); line-height: 1.15; text-wrap: balance; }
+header > div { min-width: 0; }
 .lede { margin: 0; color: var(--muted); }
 .note { border-radius: 14px; padding: 14px 16px; display: grid; gap: 10px; }
 .note.warn { background: var(--warn-soft); }
@@ -192,11 +193,12 @@ h2.part { margin: 12px 0 0; font-size: 20px; }
     <li>Списки хранятся только на этом телефоне.</li>
     <li>Не нажимайте у Chrome «Очистить все данные» в настройках — списки удалятся. Обычная «Очистка» мусора на Xiaomi безопасна.</li>
     <li>Чтобы не потерять списки, иногда сохраняйте копию: в приложении «Объект ▾» → «Сохранить в файл».</li>
-    <li>Когда выйдет новая версия, в приложении появится плашка «Доступна новая версия» — нажмите «Обновить».</li>
+    <li>Новые версии устанавливаются сами: приложение один раз перезагрузится и покажет «Приложение обновлено». Ничего нажимать не нужно.</li>
     <li>Удалить приложение: долгое нажатие на значок → «Удалить».</li>
   </ul>
 
   <a class="btn primary block" href="./">Открыть приложение</a>
+  <a class="btn block" href="help.html">Как пользоваться приложением</a>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
@@ -206,7 +208,7 @@ h2.part { margin: 12px 0 0; font-size: 20px; }
   var ua = navigator.userAgent;
   var standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   // Встроенные браузеры Telegram, WhatsApp, Mi Browser и другие WebView не умеют устанавливать приложения
-  var inApp = /MiuiBrowser|Telegram|WhatsApp|Instagram|FBAN|FBAV|; wv\)|YaBrowser|SamsungBrowser/i.test(ua);
+  var inApp = /MiuiBrowser|Telegram|WhatsApp|Instagram|FBAN|FBAV|; wv\)|YaBrowser/i.test(ua);
   if (standalone) document.getElementById('installed').hidden = false;
   else if (inApp) document.getElementById('not-chrome').hidden = false;
 

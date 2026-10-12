@@ -50,10 +50,10 @@ button { cursor: pointer; }
 .job-name { font-weight: 700; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chev { color: var(--muted); flex: none; }
 .search { position: relative; }
-.search input { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 12px 40px 12px 40px; font-size: 16px; }
+.search input { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 12px 46px 12px 40px; font-size: 16px; }
 .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 .search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
-.search .clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: none; width: 34px; height: 34px; border-radius: 8px; color: var(--muted); font-size: 20px; line-height: 1; }
+.search .clear { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: 0; background: none; width: 40px; height: 40px; border-radius: 8px; color: var(--muted); font-size: 20px; line-height: 1; }
 .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; }
 .chips::-webkit-scrollbar { display: none; }
 .chip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 14px; white-space: nowrap; }
@@ -72,7 +72,9 @@ button { cursor: pointer; }
 .row .name { font-weight: 500; }
 .row .spec { font-size: 13px; color: var(--muted); }
 .marks { display: flex; flex-wrap: wrap; gap: 4px; }
-.mark { font-family: var(--font-mark); font-size: 12px; padding: 1px 6px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.mark { font-family: var(--font-mark); font-size: 13px; line-height: 20px; padding: 1px 7px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+/* Дроби дюйма: шрифт интерфейса, крупнее, без изменения высоты строки */
+.frac { font-family: var(--font-ui); font-size: 1.3em; font-weight: 600; line-height: 0; vertical-align: -0.04em; margin-inline: 0.03em; }
 .mark.on { background: var(--brass-soft); border-color: transparent; color: var(--brass); }
 .badge { flex: none; font-family: var(--font-mark); font-size: 13px; font-weight: 600; color: var(--brass); background: var(--brass-soft); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
 .plus { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--water); background: var(--water-soft); font-size: 20px; line-height: 1; }
@@ -90,6 +92,7 @@ button { cursor: pointer; }
 .btn.danger.armed { background: var(--danger-soft); border-color: var(--danger); }
 .btn:disabled { opacity: .45; cursor: default; }
 .btn.block { width: 100%; justify-content: center; padding: 14px; font-size: 16px; }
+a.btn { text-decoration: none; color: var(--fg); }
 .lrow { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-top: 1px solid var(--line); }
 .lrow .body { min-width: 0; flex: 1; display: grid; gap: 3px; background: none; border: 0; text-align: left; padding: 0; }
 .lrow .name { font-weight: 500; }
@@ -117,13 +120,14 @@ button { cursor: pointer; }
 .scrim { position: fixed; inset: 0; z-index: 50; background: rgba(8, 20, 28, .45); display: flex; align-items: flex-end; justify-content: center; animation: fade .15s ease-out; }
 .sheet { width: 100%; max-width: 560px; max-height: 92%; overflow-y: auto; background: var(--surface); border-radius: 18px 18px 0 0; box-shadow: var(--shadow); padding: 8px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; animation: rise .2s ease-out; }
 .sheet .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line); justify-self: center; }
+.sheet form { display: grid; gap: 14px; }
 .sheet h3 { margin: 0; font-size: 19px; text-wrap: balance; }
 .sheet .sub { color: var(--muted); font-size: 14px; margin-top: -8px; }
 .lbl { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .field { display: grid; gap: 6px; }
 .field input, .field select, .field textarea { width: 100%; border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 11px 12px; font-size: 16px; }
 .sizes { display: flex; flex-wrap: wrap; gap: 6px; }
-.size { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 8px 12px; font-family: var(--font-mark); font-size: 14px; font-weight: 600; position: relative; }
+.size { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 9px 13px; min-height: 42px; font-family: var(--font-mark); font-size: 15px; font-weight: 600; position: relative; }
 .size[aria-pressed="true"] { background: var(--water); color: var(--water-fg); border-color: var(--water); }
 .size .dot { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--brass); color: var(--surface); font-size: 10px; line-height: 18px; text-align: center; }
 .big { display: grid; grid-template-columns: 64px 1fr 64px; gap: 8px; align-items: stretch; }

@@ -1,6 +1,6 @@
 // Сантехкомплект — service worker: работа без интернета.
 // При КАЖДОЙ выкладке увеличивайте VERSION: без этого телефоны не получат новую версию.
-const VERSION = 'v3';
+const VERSION = 'v7';
 const CORE = 'santeh-core-' + VERSION;
 const LIBS = 'santeh-libs-v1';
 
@@ -8,6 +8,7 @@ const CORE_FILES = [
   './',
   './index.html',
   './install.html',
+  './help.html',
   './platform.js',
   './app.js',
   './styles.css',
@@ -26,12 +27,14 @@ const LIB_FILES = [
 ];
 const LIB_HOSTS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
+// Обновление автоматическое: как только новая версия скачана целиком, она сразу
+// заменяет старую (skipWaiting), а страница перезагружается (см. platform.js).
 self.addEventListener('install', event => {
   event.waitUntil(Promise.all([
     // cache: 'reload' — берём файлы с сервера, а не из HTTP-кэша браузера
     caches.open(CORE).then(c => c.addAll(CORE_FILES.map(u => new Request(u, { cache: 'reload' })))),
     caches.open(LIBS).then(c => c.addAll(LIB_FILES)),
-  ]));
+  ]).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', event => {
@@ -40,10 +43,6 @@ self.addEventListener('activate', event => {
       .then(keys => Promise.all(keys.filter(k => k !== CORE && k !== LIBS).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
-});
-
-self.addEventListener('message', event => {
-  if (event.data === 'skipWaiting') self.skipWaiting();
 });
 
 const usable = res => res && (res.ok || res.type === 'opaque');
@@ -55,7 +54,7 @@ self.addEventListener('fetch', event => {
 
   // Страница и файлы приложения отдаются из кэша своей версии целиком, чтобы
   // новая index.html никогда не встретилась со старым app.js. Новая версия
-  // приходит только через обновление sw.js (плашка «Обновить» в приложении).
+  // приходит только через обновление sw.js.
   // Каждая страница отдаётся сама (index.html, install.html); незнакомый адрес — приложение.
   if (req.mode === 'navigate') {
     event.respondWith(

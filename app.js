@@ -12,7 +12,7 @@ const CATALOG = [
     p('pprfb', 'Труба PPR армированная стекловолокном', 'м', ['Ø20', 'Ø25', 'Ø32'], 'ГВС и отопление', 'армированная файбер стекло'),
     p('mp', 'Труба металлопластиковая PEX-AL-PEX', 'м', ['16×2,0', '20×2,0', '26×3,0'], '', 'металлопласт мп'),
     p('pex', 'Труба из сшитого полиэтилена PE-Xa', 'м', ['16×2,2', '20×2,8'], 'Тёплый пол, лучевая разводка', 'пекс сшитый'),
-    p('vgp', 'Труба стальная ВГП оцинкованная', 'м', ['Ду15', 'Ду20', 'Ду25', 'Ду32'], '', 'сталь вгп оцинковка'),
+    p('vgp', 'Труба стальная ВГП оцинкованная', 'м', ['Ду15 (½")', 'Ду20 (¾")', 'Ду25 (1")', 'Ду32 (1¼")'], 'Ду — условный проход', 'сталь вгп оцинковка дюйм дюймовка полдюймовая'),
     p('corr', 'Гофра защитная для труб', 'м', ['Ø16', 'Ø20', 'Ø25'], 'Под металлопластик и PE-X', 'гофротруба кожух'),
   ]},
   { id: 'ppr', name: 'Фитинги PPR', items: [
@@ -144,6 +144,10 @@ const fuse = new Fuse(PARTS.map(x => Object.assign({}, x, { sizesText: x.sizes.j
   keys: [{ name: 'name', weight: 3 }, { name: 'alias', weight: 2 }, { name: 'sizesText', weight: 1 }, { name: 'groupName', weight: 1 }, { name: 'spec', weight: 0.5 }],
   threshold: 0.38, ignoreLocation: true, minMatchCharLength: 2,
 });
+// Поиск включается с 2 символов или с одного знака дроби дюймов
+const FRACTION = /^[½¾¼⅜⅝⅞]$/;
+const isSearchQuery = q => q.length >= 2 || FRACTION.test(q);
+const SEARCH_LIMIT = 40;
 
 /* ---------- Утилиты ---------- */
 const uid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
@@ -157,6 +161,16 @@ function parseQty(s, unit) {
 }
 const plural = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c); };
 const fullName = it => it.name + (it.size ? ' ' + it.size : '');
+// Прокрутка к группе каталога так, чтобы её заголовок оказался сразу под липкой шапкой (высота шапки меняется)
+function scrollToGroup(id) {
+  const el = document.getElementById('g-' + id);
+  if (!el) return;
+  const top = document.querySelector('.top');
+  const offset = (top ? top.getBoundingClientRect().bottom : 0) + 8;
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - offset, behavior: 'smooth' });
+}
+// Размер для экрана: знаки дробей дюйма (½ ¾…) крупнее и обычным шрифтом — в моноширинном они сжаты в одну клетку
+const sizeView = s => String(s).split(/([½¾¼⅜⅝⅞])/).map((p, k) => (k % 2 ? html`<span class="frac" key=${k}>${p}</span>` : p));
 const today = () => new Date().toLocaleDateString('ru-RU');
 const lsGet = k => Platform.storage.get(k);
 const lsSet = (k, v) => Platform.storage.set(k, v);
@@ -204,7 +218,7 @@ function QtyInput({ value, onChange, unit }) {
   return html`<div class="big">
     <button type="button" aria-label="Меньше" onClick=${() => onChange(fmtQty(Math.max(0, n - step)))}>−</button>
     <label class="val">
-      <input id="qty-input" inputMode="decimal" autoComplete="off" aria-label="Количество" value=${value}
+      <input id="qty-input" inputMode="decimal" enterKeyHint="done" autoComplete="off" aria-label="Количество" value=${value}
         onFocus=${e => e.target.select()} onChange=${e => onChange(e.target.value)} />
       <span class="unit">${unit}</span>
     </label>
@@ -224,26 +238,35 @@ function QtySheet({ part, job, lockedSize, onClose, onSave, readOnly }) {
   const existing = inList(keyOf(part.id, size));
   const [qty, setQty] = useState(existing ? fmtQty(existing.qty) : '1');
   const [note, setNote] = useState(existing ? existing.note || '' : '');
-  const pick = s => { setSize(s); const e = inList(keyOf(part.id, s)); setQty(e ? fmtQty(e.qty) : '1'); setNote(e ? e.note || '' : ''); };
+  // Введённое, но не сохранённое по каждому размеру — чтобы переключение размеров его не сбрасывало
+  const drafts = useRef({});
+  const pick = s => {
+    drafts.current[size] = { qty, note };
+    setSize(s);
+    const d = drafts.current[s];
+    if (d) { setQty(d.qty); setNote(d.note); return; }
+    const e = inList(keyOf(part.id, s)); setQty(e ? fmtQty(e.qty) : '1'); setNote(e ? e.note || '' : '');
+  };
   const n = parseQty(qty, part.unit);
+  const canSave = !readOnly && n > 0;
   const save = () => onSave({ pid: part.id, name: part.name, size, unit: part.unit, group: part.group }, n, note.trim());
-  return html`<${Sheet} onClose=${onClose} label=${part.name}>
+  return html`<${Sheet} onClose=${onClose} label=${part.name}><form onSubmit=${e => { e.preventDefault(); if (canSave) save(); }}>
     <h3>${part.name}</h3>
     ${part.spec ? html`<div class="sub">${part.spec}</div>` : null}
     ${sizes.length > 1 || sizes[0] ? html`<div class="field">
       <span class="lbl">Размер</span>
       <div class="sizes">${sizes.map(s => { const e = inList(keyOf(part.id, s)); return html`<button type="button" key=${s} className="size" aria-pressed=${s === size}
-        onClick=${() => pick(s)}>${s}${e ? html`<span class="dot">${fmtQty(e.qty)}</span>` : null}</button>`; })}</div>
+        onClick=${() => pick(s)}>${sizeView(s)}${e ? html`<span class="dot">${fmtQty(e.qty)}</span>` : null}</button>`; })}</div>
     </div>` : null}
     <div class="field"><span class="lbl">Количество</span><${QtyInput} value=${qty} onChange=${setQty} unit=${part.unit} /></div>
     <div class="field"><label class="lbl" htmlFor="qty-note">Примечание</label>
-      <input id="qty-note" placeholder="Например: хром, белый, производитель" value=${note} onChange=${e => setNote(e.target.value)} /></div>
+      <input id="qty-note" enterKeyHint="done" placeholder="Например: хром, белый, производитель" value=${note} onChange=${e => setNote(e.target.value)} /></div>
     <div class="sheet-actions">
-      <button type="button" className="btn primary block" disabled=${readOnly || n <= 0} onClick=${save}>
+      <button type="submit" className="btn primary block" disabled=${!canSave}>
         ${existing ? 'Сохранить' : 'Добавить в список'} · ${fmtQty(n)} ${part.unit}</button>
       ${existing ? html`<button type="button" className="btn danger block" disabled=${readOnly} onClick=${() => onSave({ pid: part.id, size }, 0)}>Убрать из списка</button>` : null}
     </div>
-  <//>`;
+  </form><//>`;
 }
 
 /* ---------- Своя позиция ---------- */
@@ -256,14 +279,15 @@ function OwnSheet({ onClose, onSave, readOnly, initialName }) {
   const [note, setNote] = useState('');
   const n = parseQty(qty, unit);
   const ok = name.trim() && n > 0 && !readOnly;
-  return html`<${Sheet} onClose=${onClose} label="Своя позиция">
+  const save = () => onSave({ pid: 'own-' + uid(), name: name.trim(), size: size.trim(), unit, group }, n, note.trim());
+  return html`<${Sheet} onClose=${onClose} label="Своя позиция"><form onSubmit=${e => { e.preventDefault(); if (ok) save(); }}>
     <h3>Своя позиция</h3>
     <div class="sub">Для того, чего нет в каталоге</div>
     <div class="field"><label class="lbl" htmlFor="own-name">Наименование</label>
-      <input id="own-name" value=${name} onChange=${e => setName(e.target.value)} placeholder="Например: Насос циркуляционный 25-40" /></div>
+      <input id="own-name" enterKeyHint="done" value=${name} onChange=${e => setName(e.target.value)} placeholder="Например: Насос циркуляционный 25-40" /></div>
     <div class="two">
       <div class="field"><label class="lbl" htmlFor="own-size">Размер</label>
-        <input id="own-size" value=${size} onChange=${e => setSize(e.target.value)} placeholder=${'½", Ø20…'} /></div>
+        <input id="own-size" enterKeyHint="done" value=${size} onChange=${e => setSize(e.target.value)} placeholder=${'½", Ø20…'} /></div>
       <div class="field"><label class="lbl" htmlFor="own-unit">Ед. изм.</label>
         <select id="own-unit" value=${unit} onChange=${e => setUnit(e.target.value)}>${UNITS.map(u => html`<option key=${u} value=${u}>${u}</option>`)}</select></div>
     </div>
@@ -273,13 +297,17 @@ function OwnSheet({ onClose, onSave, readOnly, initialName }) {
       </select></div>
     <div class="field"><span class="lbl">Количество</span><${QtyInput} value=${qty} onChange=${setQty} unit=${unit} /></div>
     <div class="field"><label class="lbl" htmlFor="own-note">Примечание</label>
-      <input id="own-note" value=${note} onChange=${e => setNote(e.target.value)} /></div>
-    <button type="button" className="btn primary block" disabled=${!ok}
-      onClick=${() => onSave({ pid: 'own-' + uid(), name: name.trim(), size: size.trim(), unit, group }, n, note.trim())}>Добавить в список</button>
-  <//>`;
+      <input id="own-note" enterKeyHint="done" value=${note} onChange=${e => setNote(e.target.value)} /></div>
+    <button type="submit" className="btn primary block" disabled=${!ok}>Добавить в список · ${fmtQty(n)} ${unit}</button>
+  </form><//>`;
 }
 
 /* ---------- Объекты ---------- */
+function RestoreButton({ onRestore }) {
+  return html`<label className="btn" style=${{ justifyContent: 'center' }}>Загрузить из файла
+    <input id="restore-file" type="file" accept=".json,application/json" hidden onChange=${e => { const f = e.target.files[0]; e.target.value = ''; if (f) onRestore(f); }} /></label>`;
+}
+
 function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onClose, readOnly, onBackup, onRestore }) {
   const cur = jobs.find(j => j.id === currentId);
   const [mode, setMode] = useState(jobs.length ? 'list' : 'new');
@@ -288,19 +316,25 @@ function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onCl
   const startEdit = () => { setName(cur.name); setAddr(cur.address || ''); setMode('edit'); };
   if (mode !== 'list') {
     const isEdit = mode === 'edit';
-    return html`<${Sheet} onClose=${onClose} label=${isEdit ? 'Объект' : 'Новый объект'}>
+    const ok = name.trim() && !readOnly;
+    const submit = () => { isEdit ? onRename(cur.id, name.trim(), addr.trim()) : onCreate(name.trim(), addr.trim()); };
+    return html`<${Sheet} onClose=${onClose} label=${isEdit ? 'Объект' : 'Новый объект'}><form onSubmit=${e => { e.preventDefault(); if (ok) submit(); }}>
       <h3>${isEdit ? 'Данные объекта' : 'Новый объект'}</h3>
       <div class="field"><label class="lbl" htmlFor="job-name">Название</label>
-        <input id="job-name" value=${name} onChange=${e => setName(e.target.value)} placeholder="Кв. 45, санузел и кухня" /></div>
+        <input id="job-name" enterKeyHint="done" value=${name} onChange=${e => setName(e.target.value)} placeholder="Кв. 45, санузел и кухня" /></div>
       <div class="field"><label class="lbl" htmlFor="job-addr">Адрес и контакт</label>
-        <input id="job-addr" value=${addr} onChange=${e => setAddr(e.target.value)} placeholder="ул. Садовая, 12 — Ирина, +7…" /></div>
+        <input id="job-addr" enterKeyHint="done" value=${addr} onChange=${e => setAddr(e.target.value)} placeholder="ул. Садовая, 12 — Ирина, +7…" /></div>
       <div class="sheet-actions">
-        <button type="button" className="btn primary block" disabled=${!name.trim() || readOnly}
-          onClick=${() => { isEdit ? onRename(cur.id, name.trim(), addr.trim()) : onCreate(name.trim(), addr.trim()); }}>${isEdit ? 'Сохранить' : 'Создать объект'}</button>
+        <button type="submit" className="btn primary block" disabled=${!ok}>${isEdit ? 'Сохранить' : 'Создать объект'}</button>
         ${jobs.length ? html`<button type="button" className="btn block" onClick=${() => setMode('list')}>Назад к объектам</button>` : null}
         ${isEdit ? html`<${ConfirmButton} className="block" disabled=${readOnly} label="Удалить объект" confirmLabel="Нажмите ещё раз, чтобы удалить объект и список" onConfirm=${() => onDelete(cur.id)} />` : null}
       </div>
-    <//>`;
+      ${!jobs.length ? html`<div class="field">
+        <span class="lbl">Есть резервная копия?</span>
+        <${RestoreButton} onRestore=${onRestore} />
+        <span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>Загрузите файл копии — объекты и списки вернутся.</span>
+      </div>` : null}
+    </form><//>`;
   }
   return html`<${Sheet} onClose=${onClose} label="Объекты">
     <h3>Объекты</h3>
@@ -319,11 +353,11 @@ function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onCl
       <span class="lbl">Резервная копия</span>
       <div class="two">
         <button type="button" className="btn" disabled=${!jobs.length} onClick=${onBackup}>Сохранить в файл</button>
-        <label className="btn" style=${{ justifyContent: 'center' }}>Загрузить из файла
-          <input id="restore-file" type="file" accept=".json,application/json" hidden onChange=${e => { const f = e.target.files[0]; e.target.value = ''; if (f) onRestore(f); }} /></label>
+        <${RestoreButton} onRestore=${onRestore} />
       </div>
       <span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>Списки хранятся только на этом телефоне. Файл копии можно перенести на другой телефон.</span>
     </div>
+    <a className="btn block" href="help.html">Как пользоваться приложением</a>
   <//>`;
 }
 
@@ -364,16 +398,22 @@ function CatalogView({ job, query, onPick, onOwn }) {
     return html`<button type="button" key=${part.id} className="row" onClick=${() => onPick(part)}>
       <span class="body">
         <span class="name">${part.name}</span>
-        ${part.sizes[0] ? html`<span class="marks">${part.sizes.map(s => html`<span key=${s} className=${'mark' + (gotSizes.has(s) ? ' on' : '')}>${s}</span>`)}</span>` : (part.spec ? html`<span class="spec">${part.spec}</span>` : null)}
+        ${part.sizes[0] ? html`<span class="marks">${part.sizes.map(s => html`<span key=${s} className=${'mark' + (gotSizes.has(s) ? ' on' : '')}>${sizeView(s)}</span>`)}</span>` : (part.spec ? html`<span class="spec">${part.spec}</span>` : null)}
       </span>
       ${got.length ? html`<span class="badge">${single ? fmtQty(single.qty) + ' ' + part.unit : got.length + ' поз.'}</span>` : html`<span class="plus" aria-hidden="true">+</span>`}
     </button>`;
   };
   const q = query.trim();
-  if (q.length >= 2) {
-    const res = fuse.search(q).slice(0, 40).map(r => PART_BY_ID[r.item.id]);
+  if (isSearchQuery(q)) {
+    // Одиночная дробь (½, ¾…) — точный отбор по размерам: нечёткий поиск по одному символу не работает
+    const all = FRACTION.test(q)
+      ? PARTS.filter(x => x.sizes.some(s => s.includes(q)))
+      : fuse.search(q).map(r => PART_BY_ID[r.item.id]);
+    const res = all.slice(0, SEARCH_LIMIT);
+    const found = !res.length ? 'В каталоге ничего не нашлось.'
+      : all.length > res.length ? `Показаны первые ${res.length} из ${all.length} — уточните запрос` : 'Найдено: ' + res.length;
     return html`<div>
-      <p class="found">${res.length ? 'Найдено: ' + res.length : 'В каталоге ничего не нашлось.'}</p>
+      <p class="found">${found}</p>
       ${res.length ? html`<div class="card" style=${{ marginTop: '8px' }}>${res.map(rowFor)}</div>` : null}
       <button type="button" className="add-own" onClick=${() => onOwn(q)}>+ Добавить «${q}» как свою позицию</button>
     </div>`;
@@ -411,7 +451,7 @@ function ListView({ job, onEdit, onStep, onClear, onCopy, onShare, onExcel, canE
       <div class="group-h"><h2>${g.name}</h2><span>${g.items.length}</span></div>
       <div class="card">${g.items.map(i => html`<div class="lrow" key=${i.key}>
         <button type="button" className="body" onClick=${() => onEdit(i)}>
-          <span class="name">${i.name}${i.size ? html` <span class="mark">${i.size}</span>` : null}</span>
+          <span class="name">${i.name}${i.size ? html` <span class="mark">${sizeView(i.size)}</span>` : null}</span>
           ${i.note ? html`<span class="note">${i.note}</span>` : null}
         </button>
         <div class="step">
@@ -454,16 +494,20 @@ function App() {
   const [sheet, setSheet] = useState(null);
   const [toast, setToast] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
-  const [hasUpdate, setHasUpdate] = useState(false);
   const toastTimer = useRef(0);
   const say = text => { setToast(text); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 2600); };
 
-  useEffect(() => { if (!lsSet(JOBS_KEY, JSON.stringify(jobs))) say('Не удалось сохранить: память браузера недоступна'); }, [jobs]);
+  useEffect(() => {
+    const s = JSON.stringify(jobs);
+    if (lsGet(JOBS_KEY) === s) return; // уже сохранено (например, пришло из другой вкладки)
+    if (!lsSet(JOBS_KEY, s)) say('Не удалось сохранить: память браузера недоступна');
+  }, [jobs]);
+  // Приложение открыто ещё в одной вкладке: берём её изменения, чтобы не затереть их своими
+  useEffect(() => Platform.storage.onExternalChange(JOBS_KEY, () => { const l = loadJobs(); if (l) setJobs(l); }), []);
   useEffect(() => {
     Platform.requestPersistence();
-    const offInstall = Platform.onInstallChange(setCanInstall);
-    const offUpdate = Platform.onUpdateChange(setHasUpdate);
-    return () => { offInstall(); offUpdate(); };
+    if (Platform.wasUpdated()) say('Приложение обновлено до новой версии');
+    return Platform.onInstallChange(setCanInstall);
   }, []);
   // Кнопка «Назад» закрывает открытое окно, а не приложение
   useEffect(() => { Platform.setBackHandler(sheet ? () => setSheet(null) : null); }, [!!sheet]);
@@ -472,7 +516,12 @@ function App() {
   useEffect(() => { if (job) lsSet('santeh.current', job.id); }, [job && job.id]);
   useEffect(() => { lsSet('santeh.tab', tab); window.scrollTo(0, 0); }, [tab]);
 
-  const updateJob = (id, fn) => setJobs(list => list.map(j => (j.id === id ? Object.assign({}, fn(j), { updatedAt: Date.now() }) : j)));
+  // Изменённый объект поднимается в начало: список объектов идёт от последнего изменённого
+  const updateJob = (id, fn) => setJobs(list => {
+    const j = list.find(x => x.id === id);
+    if (!j) return list;
+    return [Object.assign({}, fn(j), { updatedAt: Date.now() })].concat(list.filter(x => x.id !== id));
+  });
   function setItem(entry, qty, note) {
     if (!job) return;
     const key = keyOf(entry.pid, entry.size);
@@ -534,13 +583,18 @@ function App() {
       const data = JSON.parse(await file.text());
       const incoming = Array.isArray(data) ? data : data && data.jobs;
       if (!Array.isArray(incoming) || incoming.some(j => !j || !j.id || !j.name || !Array.isArray(j.items))) throw new Error('format');
-      setJobs(list => {
-        const map = new Map(list.map(j => [j.id, j]));
-        incoming.forEach(j => { const cur = map.get(j.id); if (!cur || (j.updatedAt || 0) >= (cur.updatedAt || 0)) map.set(j.id, j); });
-        return Array.from(map.values()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      // Слияние по объекту: из копии берём новый объект или более свежую версию
+      const map = new Map(jobs.map(j => [j.id, j]));
+      let added = 0, updated = 0;
+      incoming.forEach(j => {
+        const cur = map.get(j.id);
+        if (!cur) { added++; map.set(j.id, j); }
+        else if ((j.updatedAt || 0) >= (cur.updatedAt || 0)) { if ((j.updatedAt || 0) > (cur.updatedAt || 0)) updated++; map.set(j.id, j); }
       });
+      setJobs(Array.from(map.values()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)));
       setSheet(null);
-      say('Загружено объектов: ' + incoming.length);
+      const parts = [added && 'добавлено объектов: ' + added, updated && 'обновлено: ' + updated].filter(Boolean).join(', ');
+      say(parts ? parts[0].toUpperCase() + parts.slice(1) : 'Новых объектов нет — всё из копии уже есть на телефоне');
     } catch (e) {
       say('Это не файл копии Сантехкомплекта');
     }
@@ -563,7 +617,7 @@ function App() {
       onPick=${part => setSheet({ type: 'qty', part })} onOwn=${name => setSheet({ type: 'own', name })} />`;
   else content = html`<${ListView} job=${job} readOnly=${false} canExcel=${true}
       onEdit=${i => setSheet({ type: 'qty', part: PART_BY_ID[i.pid] || { id: i.pid, name: i.name, unit: i.unit, group: i.group, sizes: [i.size || ''], spec: '' }, size: i.size || '' })}
-      onStep=${(i, d) => { const q = parseQty(i.qty + d, i.unit); setItem(i, q); if (q <= 0) say('Убрано: ' + fullName(i)); }}
+      onStep=${(i, d) => { const q = parseQty(Math.max(0, i.qty + d), i.unit); setItem(i, q); if (q <= 0) say('Убрано: ' + fullName(i)); }}
       onClear=${() => { updateJob(job.id, j => Object.assign({}, j, { items: [] })); say('Список очищен'); }}
       onCopy=${copyText} onShare=${canShareText ? shareText : null} onExcel=${exportExcel} goCatalog=${() => setTab('catalog')} />`;
 
@@ -578,11 +632,10 @@ function App() {
           <input id="search" type="search" placeholder="Поиск: муфта 20, американка, ½…" value=${query} onChange=${e => setQuery(e.target.value)} aria-label="Поиск по каталогу" />
           ${query ? html`<button type="button" className="clear" aria-label="Очистить поиск" onClick=${() => setQuery('')}>×</button>` : null}
         </div>
-        ${query.trim().length < 2 ? html`<nav class="chips" aria-label="Разделы каталога">${CATALOG.map(g => html`<button type="button" key=${g.id} className="chip"
-          onClick=${() => { const el = document.getElementById('g-' + g.id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+        ${!isSearchQuery(query.trim()) ? html`<nav class="chips" aria-label="Разделы каталога">${CATALOG.map(g => html`<button type="button" key=${g.id} className="chip"
+          onClick=${() => scrollToGroup(g.id)}>
           ${g.name}${groupCounts[g.id] ? html`<span class="n">${groupCounts[g.id]}</span>` : null}</button>`)}</nav>` : null}` : null}
     </header>
-    ${hasUpdate ? html`<div class="notice bar"><span>Доступна новая версия приложения.</span><button type="button" className="btn primary" onClick=${() => Platform.applyUpdate()}>Обновить</button></div>` : null}
     ${canInstall ? html`<div class="notice bar"><span>Установите приложение на главный экран — оно будет работать без интернета.</span><button type="button" className="btn primary" onClick=${() => Platform.install()}>Установить</button></div>` : null}
     <main>${content}</main>
 

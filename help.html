@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Справка Сантехкомплекта</title>
+<meta name="description" content="Как пользоваться приложением «Сантехкомплект»: объекты, каталог, список запчастей, отправка поставщику">
+<meta name="theme-color" content="#0d5f80" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16222a" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<script src="platform.js"></script>
+<style>
+/* Справка для телефона: крупный текст, один столбец, оглавление сверху, разделы-карточки */
+:root {
+  --bg: #eef2f4; --surface: #ffffff; --surface-2: #f6f8f9; --fg: #13222c; --muted: #5a6b76; --line: #d8e0e5;
+  --water: #0d5f80; --water-fg: #ffffff; --water-soft: #e1eff5; --brass: #8a5a08; --brass-soft: #fbefd6;
+  --font-ui: "Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mark: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e161b; --surface: #16222a; --surface-2: #1b2932; --fg: #e5edf1; --muted: #93a5b0; --line: #283a45;
+    --water: #4fb2d8; --water-fg: #06212d; --water-soft: #173544; --brass: #e3ac45; --brass-soft: #3a2c12;
+  }
+}
+* { box-sizing: border-box; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 17px; line-height: 1.5; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--water); outline-offset: 2px; }
+.wrap { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+header { display: flex; gap: 14px; align-items: center; }
+header img { width: 64px; height: 64px; border-radius: 16px; flex: none; }
+h1 { margin: 0; font-size: clamp(21px, 6vw, 26px); line-height: 1.15; text-wrap: balance; }
+header > div { min-width: 0; }
+.lede { margin: 0; color: var(--muted); }
+.quick { background: var(--brass-soft); border-radius: 16px; padding: 16px; display: grid; gap: 10px; }
+.quick h2 { margin: 0; font-size: 18px; }
+.quick ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+nav.toc { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+nav.toc h2 { margin: 0 0 8px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+nav.toc ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+nav.toc a { display: block; padding: 6px 0; color: var(--water); text-decoration: none; font-weight: 500; }
+.sec { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; scroll-margin-top: 16px; }
+.sec h2 { margin: 0; font-size: 20px; text-wrap: balance; }
+.sec h3 { margin: 6px 0 0; font-size: 17px; }
+.sec p { margin: 0; }
+.sec ol, .sec ul { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+.why { color: var(--muted); font-size: 15px; }
+.tap { font-weight: 600; background: var(--water-soft); color: var(--water); padding: 0 6px; border-radius: 6px; white-space: nowrap; }
+.mark { font-family: var(--font-mark); font-size: 14px; padding: 0 6px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--line); white-space: nowrap; }
+.mark.on { background: var(--brass-soft); color: var(--brass); border-color: transparent; }
+.badge { font-family: var(--font-mark); font-size: 14px; font-weight: 600; color: var(--brass); background: var(--brass-soft); border-radius: 999px; padding: 1px 9px; white-space: nowrap; }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; font-size: 15px; width: 100%; }
+th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+th { background: var(--surface-2); font-weight: 600; }
+pre.sample { margin: 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; font-family: var(--font-mark); font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 0 16px; }
+details summary { cursor: pointer; padding: 14px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+details summary::-webkit-details-marker { display: none; }
+details summary::after { content: "+"; color: var(--muted); font-size: 22px; line-height: 1; }
+details[open] summary::after { content: "−"; }
+details > div { padding: 0 0 14px; display: grid; gap: 8px; }
+details p { margin: 0; }
+h2.part { margin: 12px 0 0; font-size: 20px; }
+.btns { display: grid; gap: 10px; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 12px; padding: 15px 16px; font: inherit; font-weight: 600; font-size: 17px; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; }
+.btn.primary { background: var(--water); border-color: var(--water); color: var(--water-fg); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="icons/icon-192.png" alt="">
+    <div>
+      <h1>Как пользоваться «Сантехкомплектом»</h1>
+      <p class="lede">Электронный список запчастей на объект вместо бумажного.</p>
+    </div>
+  </header>
+
+  <section class="quick" aria-labelledby="q-h">
+    <h2 id="q-h">Коротко: три шага</h2>
+    <ol>
+      <li>Вверху выберите или создайте <b>объект</b> — квартиру, дом, котельную.</li>
+      <li>В <b>каталоге</b> нажмите на нужную деталь, выберите размер и количество, нажмите <span class="tap">Добавить в список</span>.</li>
+      <li>На вкладке <b>«Список»</b> нажмите <span class="tap">Отправить</span> — и список уйдёт поставщику в Telegram, WhatsApp или на почту.</li>
+    </ol>
+  </section>
+
+  <nav class="toc" aria-labelledby="toc-h">
+    <h2 id="toc-h">Разделы</h2>
+    <ul>
+      <li><a href="#screen">Что где на экране</a></li>
+      <li><a href="#objects">Объекты</a></li>
+      <li><a href="#add">Как добавить деталь</a></li>
+      <li><a href="#search">Поиск</a></li>
+      <li><a href="#own">Если детали нет в каталоге</a></li>
+      <li><a href="#list">Список: проверить и поправить</a></li>
+      <li><a href="#send">Отправить список поставщику</a></li>
+      <li><a href="#backup">Резервная копия и новый телефон</a></li>
+      <li><a href="#offline">Без интернета и обновления</a></li>
+      <li><a href="#faq">Частые вопросы</a></li>
+    </ul>
+  </nav>
+
+  <section class="sec" id="screen">
+    <h2>Что где на экране</h2>
+    <ul>
+      <li><b>Вверху</b> — название текущего объекта. Нажмите на него, чтобы переключиться на другой объект или создать новый.</li>
+      <li><b>Под ним</b> — поиск по каталогу и ряд кнопок-разделов: «Трубы», «Фитинги PPR», «Канализация»… Нажмите на раздел — каталог прокрутится к нему. Цифра на кнопке показывает, сколько позиций из этого раздела уже в списке.</li>
+      <li><b>Внизу</b> — две вкладки: <b>«Каталог»</b> (все детали) и <b>«Список»</b> (что вы набрали). Цифра на «Списке» — сколько позиций в нём.</li>
+    </ul>
+  </section>
+
+  <section class="sec" id="objects">
+    <h2>Объекты</h2>
+    <p>У каждого объекта свой отдельный список запчастей. Все объекты хранятся в приложении, между ними можно переключаться.</p>
+    <h3>Создать объект</h3>
+    <ol>
+      <li>Нажмите на название объекта вверху.</li>
+      <li><span class="tap">+ Новый объект</span>.</li>
+      <li>Напишите название, например «Кв. 12, кухня», и при желании адрес и контакт.</li>
+      <li><span class="tap">Создать объект</span>.</li>
+    </ol>
+    <h3>Переключиться, изменить, удалить</h3>
+    <ul>
+      <li><b>Переключиться</b> — нажмите на название вверху и выберите объект в списке.</li>
+      <li><b>Изменить название или адрес</b> — там же <span class="tap">Изменить текущий</span>.</li>
+      <li><b>Удалить</b> — <span class="tap">Изменить текущий</span> → <span class="tap">Удалить объект</span>, затем нажмите кнопку ещё раз для подтверждения. Удаляется объект вместе со списком.</li>
+    </ul>
+    <p class="why">При первом запуске в приложении есть объект «Пример: кв. 45, санузел» — на нём можно потренироваться, а потом удалить.</p>
+  </section>
+
+  <section class="sec" id="add">
+    <h2>Как добавить деталь</h2>
+    <ol>
+      <li>Найдите деталь в каталоге или через поиск и нажмите на неё. Снизу откроется окно.</li>
+      <li><b>Размер.</b> Выберите нужный: <span class="mark">Ø20</span>, <span class="mark">½"</span>, <span class="mark">110×50</span>. Если у детали один размер или их нет, этого шага не будет.</li>
+      <li><b>Количество.</b> Кнопки <span class="tap">−</span> и <span class="tap">+</span> меняют на 1. Можно нажать на число и ввести своё с клавиатуры. Кнопки 1, 2, 4, 6, 10… сразу ставят это значение.</li>
+      <li><b>Примечание</b> — по желанию: цвет, производитель, «на ввод ХВС».</li>
+      <li><span class="tap">Добавить в список</span>. Внизу появится короткое сообщение, например «Муфта PPR Ø25 — 10 шт».</li>
+    </ol>
+    <h3>Как понять, что деталь уже в списке</h3>
+    <ul>
+      <li>Справа от детали вместо <span class="badge">+</span> стоит количество, например <span class="badge">12 м</span>, или число позиций, например <span class="badge">2 поз.</span>, если взято несколько размеров.</li>
+      <li>Размеры, которые уже в списке, подсвечены: <span class="mark on">Ø20</span> <span class="mark">Ø25</span>.</li>
+      <li>В окне детали у таких размеров есть точка с количеством. Если открыть уже добавленный размер, кнопка называется <span class="tap">Сохранить</span>, и можно поменять количество.</li>
+    </ul>
+    <h3>Целые и дробные количества</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Единица</th><th>Как считается</th></tr></thead>
+      <tbody>
+        <tr><td>шт, компл, уп</td><td>Только целые. 2,5 шт превратится в 3.</td></tr>
+        <tr><td>м, кг, л</td><td>Можно с дробью: 2,5 м или 0,75 кг. Запятая и точка — одинаково.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="why">Окно можно закрыть кнопкой «Назад» или нажатием на тёмную область над ним. Тогда ничего не сохранится — сохраняет только кнопка «Добавить» или «Сохранить».</p>
+  </section>
+
+  <section class="sec" id="search">
+    <h2>Поиск</h2>
+    <p>Поле поиска вверху каталога. Начните печатать — после второй буквы появятся найденные детали.</p>
+    <ul>
+      <li><b>По названию или его части:</b> «тройник», «муфта 20».</li>
+      <li><b>С опечаткой:</b> «амереканка» найдёт американки, «металопласт» — металлопластик.</li>
+      <li><b>По-рабочему:</b> «гребёнка» — коллектор, «пакля» — лён, «водомер» — счётчик, «батарея» — радиатор, «грязевик» — сетчатый фильтр.</li>
+      <li><b>По размеру:</b> «½», «Ø110», «110×50».</li>
+    </ul>
+    <p>Крестик <span class="tap">×</span> в поле поиска возвращает весь каталог.</p>
+  </section>
+
+  <section class="sec" id="own">
+    <h2>Если детали нет в каталоге</h2>
+    <p>Добавьте свою позицию:</p>
+    <ul>
+      <li>в самом низу каталога — <span class="tap">+ Своя позиция, которой нет в каталоге</span>;</li>
+      <li>или, если поиск ничего не нашёл, — <span class="tap">+ Добавить «…» как свою позицию</span>: название подставится само.</li>
+    </ul>
+    <p>Заполните название, при желании размер, выберите единицу измерения и раздел, в котором позиция будет в списке. По умолчанию — «Свои позиции».</p>
+  </section>
+
+  <section class="sec" id="list">
+    <h2>Список: проверить и поправить</h2>
+    <p>На вкладке <b>«Список»</b> позиции сгруппированы по разделам в том же порядке, что и каталог.</p>
+    <ul>
+      <li><b>Поменять количество</b> — кнопки <span class="tap">−</span> и <span class="tap">+</span> прямо в строке.</li>
+      <li><b>Убрать позицию</b> — нажимайте <span class="tap">−</span> до нуля, или нажмите на название и выберите <span class="tap">Убрать из списка</span>.</li>
+      <li><b>Поменять примечание или ввести точное количество</b> — нажмите на название позиции.</li>
+      <li><b>Очистить весь список</b> — <span class="tap">Очистить</span>, затем ещё раз для подтверждения. Если второй раз не нажать, через несколько секунд кнопка вернётся и ничего не удалится.</li>
+    </ul>
+  </section>
+
+  <section class="sec" id="send">
+    <h2>Отправить список поставщику</h2>
+    <p>Кнопки вверху вкладки «Список»:</p>
+    <ul>
+      <li><span class="tap">Отправить</span> — открывает меню телефона: выберите Telegram, WhatsApp, почту, и список уйдёт текстом.</li>
+      <li><span class="tap">Копировать текстом</span> — копирует список; затем вставьте его в любое сообщение.</li>
+      <li><span class="tap">Excel</span> — делает таблицу Excel: её можно отправить файлом или сохранить на телефон.</li>
+    </ul>
+    <p>Так выглядит текст:</p>
+<pre class="sample">Объект: Кв. 12, кухня
+Адрес: ул. Садовая, 12
+Дата: 13.10.2026
+
+ТРУБЫ
+• Труба PPR PN20 Ø25 — 6 м
+
+ФИТИНГИ PPR
+• Муфта PPR Ø25 — 10 шт
+
+ЗАПОРНАЯ АРМАТУРА
+• Кран шаровой полнопроходной ВР-ВР ½" — 2 шт (на ввод ХВС)
+
+Всего позиций: 3</pre>
+    <p class="why">В таблице Excel те же данные по колонкам: №, раздел, наименование, размер, количество, единица, примечание.</p>
+  </section>
+
+  <section class="sec" id="backup">
+    <h2>Резервная копия и новый телефон</h2>
+    <p>Списки хранятся только на вашем телефоне. Чтобы не потерять их или перенести на другой телефон, сохраните копию.</p>
+    <h3>Сохранить копию</h3>
+    <ol>
+      <li>Нажмите на название объекта вверху.</li>
+      <li>В разделе «Резервная копия» — <span class="tap">Сохранить в файл</span>.</li>
+      <li>Отправьте файл себе в Telegram или на почту, или сохраните на Google Диск.</li>
+    </ol>
+    <h3>Загрузить на новом телефоне</h3>
+    <ol>
+      <li>Установите приложение на новый телефон.</li>
+      <li>Скачайте на него файл копии.</li>
+      <li>Название объекта вверху → <span class="tap">Загрузить из файла</span> → выберите файл.</li>
+    </ol>
+    <p class="why">Объекты из копии добавятся к тем, что уже есть на телефоне. Если объект есть и там и там, останется тот, что изменяли позже.</p>
+  </section>
+
+  <section class="sec" id="offline">
+    <h2>Без интернета и обновления</h2>
+    <ul>
+      <li><b>Интернет не нужен.</b> После установки приложение полностью работает без сети — в подвале, на стройке, в режиме полёта. Отправить список, конечно, получится, только когда связь появится.</li>
+      <li><b>Обновления приходят сами.</b> Когда выходит новая версия, приложение один раз перезагружается и пишет «Приложение обновлено до новой версии». Ничего нажимать не нужно, списки сохраняются.</li>
+    </ul>
+  </section>
+
+  <h2 class="part" id="faq">Частые вопросы</h2>
+  <details>
+    <summary>Пропали все позиции из списка</summary>
+    <div>
+      <p>Скорее всего, выбран другой объект. Посмотрите название вверху и переключитесь на нужный.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Кнопка «Добавить в список» серая и не нажимается</summary>
+    <div>
+      <p>Количество равно нулю или стёрто. Введите число больше нуля.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Ввожу 2,5, а получается 3</summary>
+    <div>
+      <p>Для штук, комплектов и упаковок приложение считает только целые. Дробные количества можно вводить для метров, килограммов и литров.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Изменил количество, закрыл окно — не сохранилось</summary>
+    <div>
+      <p>Изменения сохраняются только кнопкой «Добавить в список» или «Сохранить». Кнопка «Назад» и нажатие мимо окна закрывают его без сохранения.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Кнопки «Отправить» нет</summary>
+    <div>
+      <p>Так бывает на компьютере. Используйте «Копировать текстом» и вставьте список в сообщение.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Нужной детали или размера нет в каталоге</summary>
+    <div>
+      <p>Добавьте её как свою позицию — см. раздел <a href="#own">«Если детали нет в каталоге»</a>. И сообщите, что добавить в каталог насовсем.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Не удаляйте данные Chrome</summary>
+    <div>
+      <p>В настройках телефона у Chrome есть «Очистить все данные» — это удалит и списки приложения. Обычная «Очистка» мусора на Xiaomi безопасна. На всякий случай иногда сохраняйте <a href="#backup">резервную копию</a>.</p>
+    </div>
+  </details>
+
+  <div class="btns">
+    <a class="btn primary" href="./">Открыть приложение</a>
+    <a class="btn" href="install.html">Как установить на телефон</a>
+  </div>
+</div>
+</body>
+</html>
