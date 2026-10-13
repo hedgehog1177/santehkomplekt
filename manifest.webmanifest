@@ -10,6 +10,10 @@
   "orientation": "portrait",
   "background_color": "#eef2f4",
   "theme_color": "#0d5f80",
+  "user_preferences": {
+    "color_scheme": { "dark": { "background_color": "#16222a", "theme_color": "#16222a" } },
+    "color_scheme_dark": { "background_color": "#16222a", "theme_color": "#16222a" }
+  },
   "categories": ["business", "productivity", "utilities"],
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

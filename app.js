@@ -434,6 +434,7 @@ function ListView({ job, onEdit, onStep, onClear, onCopy, onShare, onExcel, canE
       <h2>Список пока пуст</h2>
       <p>Откройте каталог, нажмите на нужную деталь и выберите количество. Позиция появится здесь, сгруппированная по разделам.</p>
       <button type="button" className="btn primary" onClick=${goCatalog}>Открыть каталог</button>
+      <a className="btn" href="help.html">Как пользоваться приложением</a>
     </div>`;
   }
   return html`<div>
@@ -612,6 +613,7 @@ function App() {
       <h2>Начните с объекта</h2>
       <p>Каждый объект — отдельный список запчастей: квартира, дом, котельная. Создайте первый, затем выбирайте детали из каталога.</p>
       <button type="button" className="btn primary" onClick=${() => setSheet({ type: 'jobs' })}>Создать объект</button>
+      <a className="btn" href="help.html">Как пользоваться приложением</a>
     </div>`;
   else if (tab === 'catalog') content = html`<${CatalogView} job=${job} query=${query}
       onPick=${part => setSheet({ type: 'qty', part })} onOwn=${name => setSheet({ type: 'own', name })} />`;
@@ -623,10 +625,13 @@ function App() {
 
   return html`<div class="wrap">
     <header class="top">
-      <button type="button" className="job-btn" onClick=${() => setSheet({ type: 'jobs' })}>
-        <span class="meta"><span class="eyebrow">Объект</span><span class="job-name">${job ? job.name : 'Не выбран'}</span></span>
-        <${IconChev} />
-      </button>
+      <div class="top-row">
+        <button type="button" className="job-btn" onClick=${() => setSheet({ type: 'jobs' })}>
+          <span class="meta"><span class="eyebrow">Объект</span><span class="job-name">${job ? job.name : 'Не выбран'}</span></span>
+          <${IconChev} />
+        </button>
+        <a className="help-btn" href="help.html" aria-label="Справка: как пользоваться приложением" title="Справка">?</a>
+      </div>
       ${job && tab === 'catalog' ? html`<div class="search">
           <${IconSearch} />
           <input id="search" type="search" placeholder="Поиск: муфта 20, американка, ½…" value=${query} onChange=${e => setQuery(e.target.value)} aria-label="Поиск по каталогу" />
