@@ -170,3 +170,6 @@ img { max-width: 100%; }
 .notice.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; color: var(--fg); }
 .notice.bar span { min-width: 0; flex: 1 1 200px; }
 .notice.bar .btn { padding: 8px 14px; }
+
+/* Длинные слова в названиях («циркуляционный», «металлопластиковая») переносятся, а не уходят под кнопки */
+.row .name, .lrow .name, .lrow .note, .sheet h3, .summary h1 { overflow-wrap: anywhere; hyphens: auto; }
