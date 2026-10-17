@@ -307,6 +307,13 @@ function OwnSheet({ onClose, onSave, readOnly, initialName }) {
 }
 
 /* ---------- Объекты ---------- */
+// Версия, которая реально работает на устройстве (по офлайн-кэшу) — для поддержки: «какая у тебя версия?»
+function AppVersion() {
+  const [v, setV] = useState(null);
+  useEffect(() => { let alive = true; Platform.getVersion().then(x => { if (alive) setV(x); }); return () => { alive = false; }; }, []);
+  return v ? html`<p class="app-version">Version ${v}</p>` : null;
+}
+
 function RestoreButton({ onRestore }) {
   return html`<label className="btn" style=${{ justifyContent: 'center' }}>Загрузить из файла
     <input id="restore-file" type="file" accept=".json,application/json" hidden onChange=${e => { const f = e.target.files[0]; e.target.value = ''; if (f) onRestore(f); }} /></label>`;
@@ -362,6 +369,7 @@ function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onCl
       <span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>Списки хранятся только на этом телефоне. Файл копии можно перенести на другой телефон.</span>
     </div>
     <a className="btn block" href="help.html">Как пользоваться приложением</a>
+    <${AppVersion} />
   <//>`;
 }
 

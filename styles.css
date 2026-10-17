@@ -173,3 +173,6 @@ img { max-width: 100%; }
 
 /* Длинные слова в названиях («циркуляционный», «металлопластиковая») переносятся, а не уходят под кнопки */
 .row .name, .lrow .name, .lrow .note, .sheet h3, .summary h1 { overflow-wrap: anywhere; hyphens: auto; }
+
+/* Строка версии в окне «Объекты» */
+.app-version { margin: 0; text-align: right; font-family: var(--font-mark); font-size: 10px; letter-spacing: .02em; color: var(--muted); }

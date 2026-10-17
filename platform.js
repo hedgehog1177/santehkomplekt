@@ -18,6 +18,7 @@
  *   Platform.onInstallChange(cb)       cb(можно ли установить), возвращает отписку
  *   Platform.install()                 показывает системное окно установки
  *   Platform.wasUpdated()              true один раз после автоматического обновления
+ *   Platform.getVersion()              Promise<'v13' | null> — версия, которая реально работает
  *
  * Обновления в PWA автоматические: новая версия включается сама и страница
  * перезагружается. Если открыто окно (задан обработчик «Назад»), перезагрузка
@@ -60,6 +61,16 @@
   }
 
   /* ---------- Браузер (PWA) ---------- */
+
+  // Версия = офлайн-кэш, который сейчас обслуживает приложение (santeh-core-vN из sw.js).
+  // Берётся наибольший номер: во время обновления ненадолго бывают два кэша.
+  async function getVersion() {
+    try {
+      if (!('caches' in window)) return null;
+      const nums = (await caches.keys()).map(k => /^santeh-core-v(\d+)$/.exec(k)).filter(Boolean).map(m => +m[1]);
+      return nums.length ? 'v' + Math.max.apply(null, nums) : null;
+    } catch (e) { return null; }
+  }
 
   const UPDATED_KEY = 'santeh.updated';
   function wasUpdated() {
@@ -170,6 +181,7 @@
         installable.set(false);
       },
       wasUpdated,
+      getVersion,
     };
   }
 
@@ -228,6 +240,7 @@
       onInstallChange: off,   // приложение уже установлено
       install() {},
       wasUpdated: () => false, // обновление — новой версией APK
+      getVersion,              // в APK офлайн-кэша нет — вернёт null, строка версии не покажется
     };
   }
 
