@@ -8,6 +8,8 @@
 <meta name="theme-color" content="#0d5f80" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#16222a" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
+<!-- Та же тема, что выбрана в приложении (по умолчанию тёмная) -->
+<script src="theme.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,11 +25,18 @@
   --font-mark: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0e161b; --surface: #16222a; --surface-2: #1b2932; --fg: #e5edf1; --muted: #93a5b0; --line: #283a45;
     --water: #4fb2d8; --water-fg: #06212d; --water-soft: #173544; --brass: #e3ac45; --brass-soft: #3a2c12;
+    color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #0e161b; --surface: #16222a; --surface-2: #1b2932; --fg: #e5edf1; --muted: #93a5b0; --line: #283a45;
+  --water: #4fb2d8; --water-fg: #06212d; --water-soft: #173544; --brass: #e3ac45; --brass-soft: #3a2c12;
+  color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
 * { box-sizing: border-box; }
 :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 17px; line-height: 1.5; -webkit-tap-highlight-color: transparent; }
@@ -272,6 +281,12 @@ h2.part { margin: 12px 0 0; font-size: 20px; }
     <summary>Изменил количество, закрыл окно — не сохранилось</summary>
     <div>
       <p>Изменения сохраняются только кнопкой «Добавить в список» или «Сохранить». Кнопка «Назад» и нажатие мимо окна закрывают его без сохранения.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Как сделать приложение светлым</summary>
+    <div>
+      <p>Нажмите на название объекта вверху и в строке «Тема» выберите <span class="tap">Светлая</span> — или <span class="tap">Как в телефоне</span>, чтобы тема менялась вместе с настройкой телефона. Выбор запоминается. На ярком солнце светлая тема обычно читается лучше.</p>
     </div>
   </details>
   <details>

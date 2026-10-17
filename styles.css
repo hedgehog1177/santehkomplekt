@@ -32,6 +32,8 @@
   --danger: #f2877f; --danger-soft: #3d1d1b; --shadow: 0 10px 40px rgba(0, 0, 0, .5);
   color-scheme: dark;
 }
+/* «Светлая» на тёмном телефоне: и встроенные элементы браузера светлые */
+:root[data-theme="light"] { color-scheme: light; }
 
 * { box-sizing: border-box; }
 html, body { min-height: 100%; }
@@ -175,4 +177,5 @@ img { max-width: 100%; }
 .row .name, .lrow .name, .lrow .note, .sheet h3, .summary h1 { overflow-wrap: anywhere; hyphens: auto; }
 
 /* Строка версии в окне «Объекты» */
+.theme-pick .size { flex: 1 1 0; font-family: var(--font-ui); font-size: 14px; padding-inline: 8px; }
 .app-version { margin: 0; text-align: right; font-family: var(--font-mark); font-size: 10px; letter-spacing: .02em; color: var(--muted); }

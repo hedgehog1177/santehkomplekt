@@ -157,6 +157,18 @@ function AppVersion() {
   return v ? html`<p class="app-version">${v}</p>` : null;
 }
 
+// Тема оформления: по умолчанию тёмная, выбор запоминается на телефоне (theme.js)
+function ThemePicker() {
+  const [mode, setMode] = useState(() => SantehTheme.read());
+  return html`<div class="field">
+    <span class="lbl" id="theme-lbl">Тема</span>
+    <div class="sizes theme-pick" role="group" aria-labelledby="theme-lbl">
+      ${SantehTheme.MODES.map(m => html`<button type="button" key=${m.id} className="size" aria-pressed=${m.id === mode}
+        onClick=${() => setMode(SantehTheme.set(m.id))}>${m.label}</button>`)}
+    </div>
+  </div>`;
+}
+
 function RestoreButton({ onRestore }) {
   return html`<label className="btn" style=${{ justifyContent: 'center' }}>Загрузить из файла
     <input id="restore-file" type="file" accept=".json,application/json" hidden onChange=${e => { const f = e.target.files[0]; e.target.value = ''; if (f) onRestore(f); }} /></label>`;
@@ -211,6 +223,7 @@ function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onCl
       </div>
       <span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>Списки хранятся только на этом телефоне. Файл копии можно перенести на другой телефон.</span>
     </div>
+    <${ThemePicker} />
     <a className="btn block" href="help.html">Как пользоваться приложением</a>
     <${AppVersion} />
   <//>`;
