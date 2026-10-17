@@ -311,7 +311,7 @@ function OwnSheet({ onClose, onSave, readOnly, initialName }) {
 function AppVersion() {
   const [v, setV] = useState(null);
   useEffect(() => { let alive = true; Platform.getVersion().then(x => { if (alive) setV(x); }); return () => { alive = false; }; }, []);
-  return v ? html`<p class="app-version">Version ${v}</p>` : null;
+  return v ? html`<p class="app-version">${v}</p>` : null;
 }
 
 function RestoreButton({ onRestore }) {

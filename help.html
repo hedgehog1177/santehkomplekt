@@ -303,7 +303,7 @@ h2.part { margin: 12px 0 0; font-size: 20px; }
   // Версия, которая реально работает на устройстве (по офлайн-кэшу)
   Platform.getVersion().then(function (v) {
     var el = document.getElementById('app-version');
-    if (v) { el.textContent = 'Version ' + v; el.hidden = false; }
+    if (v) { el.textContent = v; el.hidden = false; }
   });
 </script>
 </body>

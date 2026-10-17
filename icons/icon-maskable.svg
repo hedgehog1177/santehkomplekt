@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Иконка под маску Android: фон на весь квадрат, рисунок уменьшен до безопасной зоны (круг 80% по центру) -->
+  <!-- Иконка под маску Android: фон на весь квадрат, кран 108% (вариант M2) — почти целиком в безопасной зоне (круг 80%), в круглой маске чуть подрезаются углы фланцев -->
   <defs>
     <radialGradient id="bg" cx="50%" cy="42%" r="78%"><stop offset="0" stop-color="#173a57"/><stop offset="1" stop-color="#060d15"/></radialGradient>
     <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe2a0"/><stop offset=".5" stop-color="#f0b448"/><stop offset="1" stop-color="#a8691a"/></linearGradient>
     <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="12" result="b"/><feFlood flood-color="#38d6ff" flood-opacity=".95"/><feComposite in2="b" operator="in" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
   <rect width="512" height="512" fill="url(#bg)"/>
-  <g transform="translate(256 256) scale(0.78) translate(-256 -246)">
+  <g transform="translate(256 256) scale(1.08) translate(-256 -246)">
     <g filter="url(#glow)">
       <rect x="112" y="250" width="288" height="92" rx="30" fill="url(#brass)"/>
       <rect x="96" y="238" width="44" height="116" rx="14" fill="url(#brass)"/>
