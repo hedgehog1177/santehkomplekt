@@ -8,11 +8,11 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#eef2f4",
-  "theme_color": "#0d5f80",
+  "background_color": "#0e161b",
+  "theme_color": "#0e161b",
   "user_preferences": {
-    "color_scheme": { "dark": { "background_color": "#16222a", "theme_color": "#16222a" } },
-    "color_scheme_dark": { "background_color": "#16222a", "theme_color": "#16222a" }
+    "color_scheme": { "dark": { "background_color": "#0e161b", "theme_color": "#0e161b" } },
+    "color_scheme_dark": { "background_color": "#0e161b", "theme_color": "#0e161b" }
   },
   "categories": ["business", "productivity", "utilities"],
   "icons": [
