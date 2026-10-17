@@ -223,10 +223,13 @@ function applyItem(items, entry, qty, note, now) {
   if (note !== undefined) item.note = note;
   return rest.concat(item);
 }
-// «Вернуть» после удаления: позиция встаёт на прежнее место в группе (поле at сохраняется) с прежними
-// количеством и примечанием. Если такую же позицию уже добавили заново — ничего не меняем, дубля не будет
-function restoreItem(items, removed) {
-  return items.some(i => i.key === removed.key) ? items : items.concat(removed);
+// «Вернуть» после удаления: позиция встаёт на прежнее место с прежними количеством и примечанием.
+// index — где она стояла в списке: важно, когда у соседей одинаковое время добавления (at), иначе
+// при равенстве они поменялись бы местами. Если такую же позицию уже добавили заново — дубля не будет
+function restoreItem(items, removed, index) {
+  if (items.some(i => i.key === removed.key)) return items;
+  const at = index == null ? items.length : Math.max(0, Math.min(index, items.length));
+  return items.slice(0, at).concat(removed, items.slice(at));
 }
 // Кнопки «+» и «−» в списке: шаг 1 для любых единиц, не меньше нуля, не больше предела
 const stepQty = (item, delta) => parseQty(Math.max(0, item.qty + delta), item.unit);

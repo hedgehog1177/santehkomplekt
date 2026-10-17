@@ -190,6 +190,17 @@ test('список: «Вернуть» после «−» до нуля', () => 
   const after = C.restoreItem(again, removed);
   assert.equal(after.filter(i => i.key === 'ppr-cpl|Ø20').length, 1);
   assert.equal(after.find(i => i.key === 'ppr-cpl|Ø20').qty, 3, 'остаётся то, что добавили заново');
+  // Одинаковое время добавления у соседей (как у счётчиков ХВС/ГВС в примере) — порядок всё равно прежний
+  let tie = [item('m-cnt', 'ХВС', 1, { at: 5 }), item('m-cnt', 'ГВС', 1, { at: 5 }), item('ppr-cpl', 'Ø20', 2, { at: 5 })];
+  const tieOrder = () => C.sortedGroups(tie).map(g => g.items.map(C.fullName).join(' | '));
+  const tieWas = tieOrder();
+  const hvs = tie[0], idx = tie.findIndex(i => i.key === hvs.key);
+  tie = C.applyItem(tie, hvs, 0, undefined, 6);
+  tie = C.restoreItem(tie, hvs, idx);
+  assert.deepEqual(tieOrder(), tieWas);
+  // Место за пределами списка — в конец; без места — тоже в конец (как раньше)
+  assert.equal(C.restoreItem([], hvs, 10)[0].key, hvs.key);
+  assert.deepEqual(C.restoreItem([item('ppr', 'Ø20', 1)], hvs).map(i => i.key), ['ppr|Ø20', hvs.key]);
   // 0,5 м тоже возвращается как 0,5
   let m = C.applyItem([], entry('ppr', 'Ø25'), 0.5, '', 1);
   const pipe = m[0];
