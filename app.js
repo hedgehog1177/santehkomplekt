@@ -7,7 +7,7 @@ const {
   CATALOG, OWN, GROUP_ORDER, GROUP_NAME, PARTS, PART_BY_ID, UNITS, PRESETS,
   keyOf, fmtQty, parseQty, plural, fullName, findItem, groupOf, sortedGroups,
   initialSize, formFor, switchSize, qtyForm, rowState,
-  applyItem, stepQty, bumpJob, normalizeJob, backupJobs, mergeJobs,
+  applyItem, restoreItem, stepQty, bumpJob, normalizeJob, backupJobs, mergeJobs,
 } = SantehCore;
 
 const fuse = new Fuse(PARTS.map(x => Object.assign({}, x, { sizesText: x.sizes.join(' '), groupName: GROUP_NAME[x.group] })), {
@@ -18,6 +18,7 @@ const fuse = new Fuse(PARTS.map(x => Object.assign({}, x, { sizesText: x.sizes.j
 const FRACTION = /^[½¾¼⅜⅝⅞]$/;
 const isSearchQuery = q => q.length >= 2 || FRACTION.test(q);
 const SEARCH_LIMIT = 40;
+const UNDO_MS = 5000; // сколько держится «Вернуть» после удаления позиции
 
 /* ---------- Утилиты ---------- */
 const uid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
@@ -346,7 +347,12 @@ function App() {
   const [toast, setToast] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
   const toastTimer = useRef(0);
-  const say = text => { setToast(text); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 2600); };
+  // Уведомление; с undo — с кнопкой «Вернуть» и держится дольше, пока идёт полоска-таймер
+  const say = (text, undo) => {
+    setToast({ text, undo, id: Date.now() });
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), undo ? UNDO_MS : 2600);
+  };
 
   useEffect(() => {
     const s = JSON.stringify(jobs);
@@ -450,7 +456,16 @@ function App() {
       onPick=${part => setSheet({ type: 'qty', part })} onOwn=${name => setSheet({ type: 'own', name })} />`;
   else content = html`<${ListView} job=${job} readOnly=${false} canExcel=${true}
       onEdit=${i => setSheet({ type: 'qty', part: PART_BY_ID[i.pid] || { id: i.pid, name: i.name, unit: i.unit, group: i.group, sizes: [i.size || ''], spec: '' }, size: i.size || '' })}
-      onStep=${(i, d) => { const q = stepQty(i, d); setItem(i, q); if (q <= 0) say('Убрано: ' + fullName(i)); }}
+      onStep=${(i, d) => {
+        const q = stepQty(i, d); setItem(i, q);
+        if (q > 0) return;
+        // Убрали «−» до нуля — 5 секунд можно вернуть; вернётся в тот же объект, даже если уже открыт другой
+        const jobId = job.id;
+        say('Убрано: ' + fullName(i), () => {
+          updateJob(jobId, j => Object.assign({}, j, { items: restoreItem(j.items, i) }));
+          say('Вернули: ' + fullName(i));
+        });
+      }}
       onClear=${() => { updateJob(job.id, j => Object.assign({}, j, { items: [] })); say('Список очищен'); }}
       onCopy=${copyText} onShare=${canShareText ? shareText : null} onExcel=${exportExcel} goCatalog=${() => setTab('catalog')} />`;
 
@@ -492,7 +507,11 @@ function App() {
       onCreate=${createJob} onDelete=${deleteJob} onBackup=${backup} onRestore=${restore}
       onRename=${(id, name, address) => { updateJob(id, j => Object.assign({}, j, { name, address })); setSheet(null); say('Сохранено'); }} />` : null}
     ${sheet && sheet.type === 'text' && job ? html`<${TextSheet} job=${job} onClose=${() => setSheet(null)} />` : null}
-    ${toast ? html`<div class="toast" role="status" aria-live="polite">${toast}</div>` : null}
+    ${toast ? html`<div class=${'toast' + (toast.undo ? ' has-act' : '')} key=${toast.id} role="status" aria-live="polite">
+      <span>${toast.text}</span>
+      ${toast.undo ? html`<button type="button" className="toast-act" onClick=${toast.undo}>Вернуть</button>
+        <span class="toast-timer" aria-hidden="true" style=${{ animationDuration: UNDO_MS + 'ms' }}></span>` : null}
+    </div>` : null}
   </div>`;
 }
 

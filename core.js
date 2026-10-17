@@ -223,6 +223,11 @@ function applyItem(items, entry, qty, note, now) {
   if (note !== undefined) item.note = note;
   return rest.concat(item);
 }
+// «Вернуть» после удаления: позиция встаёт на прежнее место в группе (поле at сохраняется) с прежними
+// количеством и примечанием. Если такую же позицию уже добавили заново — ничего не меняем, дубля не будет
+function restoreItem(items, removed) {
+  return items.some(i => i.key === removed.key) ? items : items.concat(removed);
+}
 // Кнопки «+» и «−» в списке: шаг 1 для любых единиц, не меньше нуля, не больше предела
 const stepQty = (item, delta) => parseQty(Math.max(0, item.qty + delta), item.unit);
 // Изменённый объект поднимается в начало: список объектов идёт от последнего изменённого
@@ -292,7 +297,7 @@ return {
   CATALOG, OWN, GROUP_ORDER, GROUP_NAME, PARTS, PART_BY_ID, UNITS, INT_UNITS, PRESETS, MAX_QTY, SIZE_RENAMES,
   keyOf, fmtQty, parseQty, plural, fullName, findItem, groupOf, sortedGroups,
   initialSize, formFor, switchSize, qtyForm, rowState,
-  applyItem, stepQty, bumpJob,
+  applyItem, restoreItem, stepQty, bumpJob,
   normalizeItems, normalizeJob, backupJobs, mergeJobs, buildText,
 };
 });

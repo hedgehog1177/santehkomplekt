@@ -1,6 +1,6 @@
 // Сантехкомплект — service worker: работа без интернета.
 // При КАЖДОЙ выкладке увеличивайте VERSION: без этого телефоны не получат новую версию.
-const VERSION = 'v19';
+const VERSION = 'v20';
 const CORE = 'santeh-core-' + VERSION;
 const LIBS = 'santeh-libs-v1';
 

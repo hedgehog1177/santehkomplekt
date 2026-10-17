@@ -155,11 +155,16 @@ a.btn { text-decoration: none; color: var(--fg); }
 .textout { width: 100%; min-height: 220px; font-family: var(--font-mark); font-size: 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); padding: 10px; }
 
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 60; background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100% - 32px); box-shadow: var(--shadow); animation: fade .15s ease-out; }
+/* Уведомление с «Вернуть»: кнопка справа, внизу полоска-таймер */
+.toast.has-act { display: flex; align-items: center; gap: 14px; padding: 6px 6px 6px 16px; overflow: hidden; width: max-content; }
+.toast-act { flex: none; min-height: 40px; padding: 0 14px; border: 1px solid currentColor; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
+.toast-timer { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: currentColor; opacity: .45; transform-origin: left; animation: undo-timer linear forwards; }
+@keyframes undo-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 .loading { padding: 40px 0; color: var(--muted); text-align: center; }
 
 @keyframes rise { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .scrim, .sheet, .toast { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .scrim, .sheet, .toast, .toast-timer { animation: none; } }
 
 /* Базовый сброс для отдельного приложения */
 :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }

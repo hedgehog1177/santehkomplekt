@@ -169,6 +169,34 @@ test('список: изменённая позиция остаётся на с
   assert.deepEqual(order(), was);
 });
 
+test('список: «Вернуть» после «−» до нуля', () => {
+  let items = [];
+  items = C.applyItem(items, entry('ppr-cpl', 'Ø20'), 1, 'латунь', 10);
+  items = C.applyItem(items, entry('ppr-tee', 'Ø20'), 4, '', 20);
+  items = C.applyItem(items, entry('ppr-cpl', 'Ø25'), 2, '', 30);
+  const order = () => C.sortedGroups(items)[0].items.map(C.fullName);
+  const was = order();
+  // «−» у первой позиции (1 шт) — она убирается
+  const removed = items[0];
+  items = C.applyItem(items, removed, C.stepQty(removed, -1), undefined, 40);
+  assert.equal(items.length, 2);
+  // «Вернуть» — на прежнее место, с прежним количеством и примечанием
+  items = C.restoreItem(items, removed);
+  assert.deepEqual(order(), was);
+  const back = items.find(i => i.key === 'ppr-cpl|Ø20');
+  assert.deepEqual([back.qty, back.note, back.at], [1, 'латунь', 10]);
+  // Если позицию уже добавили заново — второй не появится
+  const again = C.applyItem(C.applyItem(items, removed, 0, undefined, 50), entry('ppr-cpl', 'Ø20'), 3, '', 60);
+  const after = C.restoreItem(again, removed);
+  assert.equal(after.filter(i => i.key === 'ppr-cpl|Ø20').length, 1);
+  assert.equal(after.find(i => i.key === 'ppr-cpl|Ø20').qty, 3, 'остаётся то, что добавили заново');
+  // 0,5 м тоже возвращается как 0,5
+  let m = C.applyItem([], entry('ppr', 'Ø25'), 0.5, '', 1);
+  const pipe = m[0];
+  m = C.applyItem(m, pipe, C.stepQty(pipe, -1), undefined, 2);
+  assert.deepEqual(C.restoreItem(m, pipe).map(i => i.qty), [0.5]);
+});
+
 test('список: кнопки «+» и «−» (LIST-03…LIST-05, QTY-06)', () => {
   const st = (pid, size, qty, d) => C.stepQty(item(pid, size, qty), d);
   assert.equal(st('ppr-cpl', 'Ø20', 4, 1), 5);
