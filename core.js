@@ -146,8 +146,8 @@ const PARTS = [];
 CATALOG.forEach(g => g.items.forEach(it => { it.group = g.id; PARTS.push(it); }));
 const PART_BY_ID = Object.fromEntries(PARTS.map(x => [x.id, x]));
 const UNITS = ['шт', 'м', 'компл', 'уп', 'кг', 'л'];
-const INT_UNITS = { 'шт': 1, 'компл': 1, 'уп': 1 };
-const PRESETS = { 'м': [1, 2, 4, 6, 10, 25, 50], 'шт': [1, 2, 4, 6, 10, 20] };
+const INT_UNITS = { 'шт': 1, 'компл': 1, 'уп': 1, 'точка': 1 };
+const PRESETS = { 'м': [1, 2, 4, 6, 10, 25, 50], 'шт': [1, 2, 4, 6, 10, 20], 'час': [1, 2, 3, 4, 6, 8] };
 
 /* ---------- Количество и позиции ---------- */
 const MAX_QTY = 99999;
@@ -263,7 +263,10 @@ function normalizeItems(items) {
   });
   return out;
 }
-const normalizeJob = j => Object.assign({ items: [] }, j, { items: normalizeItems(j.items) });
+const normalizeJob = j => Object.assign({ items: [], works: [] }, j, {
+  items: normalizeItems(j.items),
+  works: Array.isArray(j.works) ? j.works : [],
+});
 // Объекты из файла копии или null, если это не копия Сантехкомплекта
 function backupJobs(data) {
   const incoming = Array.isArray(data) ? data : data && data.jobs;
@@ -280,6 +283,88 @@ function mergeJobs(current, incoming) {
     else if ((j.updatedAt || 0) >= (cur.updatedAt || 0)) { if ((j.updatedAt || 0) > (cur.updatedAt || 0)) updated++; map.set(j.id, j); }
   });
   return { jobs: Array.from(map.values()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)), added, updated };
+}
+
+/* ---------- Работы: свой прайс мастера и работы в объекте ---------- */
+// В объекте работы лежат отдельно от деталей (job.works), поэтому заявка в магазин, Excel и метки
+// каталога их не видят. Строка работы устроена как позиция списка (pid «w:…», без размера),
+// так что для неё работают те же applyItem, restoreItem и stepQty
+const WORK_UNITS = ['шт', 'точка', 'м', 'компл', 'час'];
+const MAX_PRICE = 9999999;
+const w = (n, name, unit) => ({ id: 'w-' + String(n).padStart(2, '0'), name, unit, price: null, updatedAt: 0 });
+// Стартовый прайс: типовые работы без цен — мастер проставит свои и удалит лишнее
+const DEFAULT_WORKS = [
+  w(1, 'Выезд и диагностика', 'шт'), w(2, 'Установка смесителя', 'шт'), w(3, 'Замена смесителя', 'шт'),
+  w(4, 'Замена сифона', 'шт'), w(5, 'Установка раковины', 'шт'), w(6, 'Установка унитаза', 'шт'),
+  w(7, 'Установка инсталляции с унитазом', 'компл'), w(8, 'Установка ванны', 'шт'), w(9, 'Установка душевой кабины', 'шт'),
+  w(10, 'Подключение стиральной машины', 'шт'), w(11, 'Подключение посудомоечной машины', 'шт'),
+  w(12, 'Установка водонагревателя', 'шт'), w(13, 'Установка счётчика воды', 'шт'), w(14, 'Замена шарового крана', 'шт'),
+  w(15, 'Монтаж радиатора отопления', 'шт'), w(16, 'Монтаж полотенцесушителя', 'шт'),
+  w(17, 'Разводка водоснабжения', 'точка'), w(18, 'Разводка канализации', 'точка'), w(19, 'Монтаж трубы', 'м'),
+  w(20, 'Прочистка канализации', 'шт'), w(21, 'Почасовая работа', 'час'),
+];
+// Цена: пусто, 0 или мусор — null («договорная»); пробелы, «₽», «руб» допускаются; до копеек
+function parsePrice(s) {
+  const t = String(s == null ? '' : s).replace(/\s|₽|руб\.?/gi, '').replace(',', '.').replace(/[^\d.]/g, '');
+  const n = parseFloat(t);
+  if (!isFinite(n) || n <= 0) return null;
+  return Math.min(Math.round(n * 100) / 100, MAX_PRICE);
+}
+// «1 500 ₽», «1 500,50 ₽» (неразрывные пробелы), null — «договорная»
+function fmtMoney(n) {
+  if (n == null) return 'договорная';
+  const [i, f] = String(Math.round(n * 100) / 100).split('.');
+  return i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (f ? ',' + f.padEnd(2, '0') : '') + ' ₽';
+}
+// Цена в поле ввода: 1500 → «1500», 1500.5 → «1500,5»; null → пусто
+const priceInput = n => (n == null ? '' : String(n).replace('.', ','));
+// Строка работы для объекта из записи прайса
+const workEntry = (work, price) => ({ pid: 'w:' + work.id, wid: work.id, name: work.name, size: '', unit: work.unit, price });
+const lineSum = i => (i.price == null ? null : Math.round(i.qty * i.price * 100) / 100);
+// Итог по работам объекта: сумма тех, где цена есть, и сколько договорных
+function worksTotal(works) {
+  let sum = 0, unpriced = 0;
+  (works || []).forEach(i => { const s = lineSum(i); if (s == null) unpriced++; else sum += s; });
+  return { sum: Math.round(sum * 100) / 100, unpriced, count: (works || []).length };
+}
+// «2 шт × 1 500 ₽ = 3 000 ₽» или «1 шт, цена договорная»
+const workLine = i => fmtQty(i.qty) + ' ' + i.unit + (i.price == null ? ', цена договорная' : ' × ' + fmtMoney(i.price) + ' = ' + fmtMoney(lineSum(i)));
+// Поиск по своему прайсу: все слова запроса, без разницы е/ё и регистра
+const fold = s => String(s).toLowerCase().replace(/ё/g, 'е');
+function filterWorks(list, q) {
+  const words = fold(q).split(/\s+/).filter(Boolean);
+  return words.length ? list.filter(x => words.every(wd => fold(x.name).includes(wd))) : list;
+}
+// Запись прайса из копии: только с id, названием и известной единицей
+const isWork = x => x && x.id && typeof x.name === 'string' && x.name.trim() && WORK_UNITS.includes(x.unit);
+// Слияние прайса из резервной копии: новые работы добавляются, совпавшие по id — более свежая версия
+function mergeWorkLists(current, incoming) {
+  const map = new Map(current.map(x => [x.id, x]));
+  let added = 0, updated = 0;
+  (Array.isArray(incoming) ? incoming : []).filter(isWork).forEach(x => {
+    const cur = map.get(x.id);
+    const item = Object.assign({}, x, { price: x.price == null ? null : parsePrice(x.price) });
+    if (!cur) { added++; map.set(x.id, item); }
+    else if ((x.updatedAt || 0) > (cur.updatedAt || 0)) { updated++; map.set(x.id, item); }
+  });
+  return { list: Array.from(map.values()), added, updated };
+}
+// Текст для клиента: работы с ценами и итог (детали — в заявке магазину, сюда не попадают)
+function buildClientText(job, date) {
+  const works = job.works || [];
+  const t = worksTotal(works);
+  const lines = ['Объект: ' + job.name];
+  if (job.address) lines.push('Адрес: ' + job.address);
+  lines.push('Дата: ' + date, '', 'РАБОТЫ');
+  works.slice().sort((a, b) => (a.at || 0) - (b.at || 0)).forEach(i => lines.push('• ' + i.name + ' — ' + workLine(i) + (i.note ? ' (' + i.note + ')' : '')));
+  lines.push('');
+  if (t.unpriced === t.count) lines.push('Стоимость работ — договорная');
+  else lines.push('Итого за работы: ' + fmtMoney(t.sum) + (t.unpriced ? ' (без договорных: ' + t.unpriced + ')' : ''));
+  return lines.join('\n');
+}
+// Свой прайс текстом: «• Замена смесителя — 1 500 ₽ / шт»
+function buildPriceListText(list) {
+  return ['Прайс на работы', ''].concat(list.map(x => '• ' + x.name + ' — ' + (x.price == null ? 'договорная' : fmtMoney(x.price) + ' / ' + x.unit))).join('\n');
 }
 
 /* ---------- Текст для мессенджера ---------- */
@@ -301,6 +386,8 @@ return {
   keyOf, fmtQty, parseQty, plural, fullName, findItem, groupOf, sortedGroups,
   initialSize, formFor, switchSize, qtyForm, rowState,
   applyItem, restoreItem, stepQty, bumpJob,
+  WORK_UNITS, DEFAULT_WORKS, MAX_PRICE, parsePrice, fmtMoney, priceInput, workEntry, lineSum, worksTotal, workLine,
+  filterWorks, mergeWorkLists, buildClientText, buildPriceListText,
   normalizeItems, normalizeJob, backupJobs, mergeJobs, buildText,
 };
 });

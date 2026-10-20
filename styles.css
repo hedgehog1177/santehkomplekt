@@ -115,7 +115,7 @@ a.btn { text-decoration: none; color: var(--fg); }
 
 /* Tab bar */
 .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
-.tabbar .in { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; }
+.tabbar .in { max-width: 760px; margin: 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
 .tab { border: 0; background: none; padding: 10px 8px 12px; display: grid; justify-items: center; gap: 2px; color: var(--muted); font-size: 13px; font-weight: 600; position: relative; }
 .tab[aria-current="page"] { color: var(--water); }
 .tab[aria-current="page"]::before { content: ""; position: absolute; top: 0; left: 30%; right: 30%; height: 3px; border-radius: 0 0 3px 3px; background: var(--water); }
@@ -160,6 +160,9 @@ a.btn { text-decoration: none; color: var(--fg); }
 .toast-act { flex: none; min-height: 40px; padding: 0 14px; border: 1px solid currentColor; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
 .toast-timer { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: currentColor; opacity: .45; transform-origin: left; animation: undo-timer linear forwards; }
 @keyframes undo-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+/* Работы */
+.works-hint { margin: 6px 0 12px; color: var(--muted); font-size: 14px; }
+.work-sum { margin: 0; font-family: var(--font-mark); font-weight: 600; font-size: 15px; color: var(--fg); }
 .loading { padding: 40px 0; color: var(--muted); text-align: center; }
 
 @keyframes rise { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
