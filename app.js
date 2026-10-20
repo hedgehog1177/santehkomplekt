@@ -53,6 +53,7 @@ const IconSearch = () => html`<svg width="18" height="18" viewBox="0 0 24 24" fi
 const IconChev = () => html`<svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m7 10 5 5 5-5"/></svg>`;
 const IconBook = () => html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h6v14H4zM14 5h6v14h-6z"/><path d="M6 9h2M16 9h2M6 12h2M16 12h2"/></svg>`;
 const IconTool = () => html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/></svg>`;
+const IconGear = () => html`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`;
 const IconList = () => html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/></svg>`;
 
 /* ---------- Мелкие компоненты ---------- */
@@ -176,7 +177,7 @@ function RestoreButton({ onRestore }) {
     <input id="restore-file" type="file" accept=".json,application/json" hidden onChange=${e => { const f = e.target.files[0]; e.target.value = ''; if (f) onRestore(f); }} /></label>`;
 }
 
-function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onClose, readOnly, onBackup, onRestore, pinOn, onPin }) {
+function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onClose, readOnly, onRestore }) {
   const cur = jobs.find(j => j.id === currentId);
   const [mode, setMode] = useState(jobs.length ? 'list' : 'new');
   const [name, setName] = useState(mode === 'edit' && cur ? cur.name : '');
@@ -217,7 +218,14 @@ function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onCl
       <button type="button" className="btn" disabled=${!cur || readOnly} onClick=${startEdit}>Изменить текущий</button>
       <button type="button" className="btn primary" disabled=${readOnly} onClick=${() => { setName(''); setAddr(''); setMode('new'); }}>+ Новый объект</button>
     </div>
-    <div class="field section">
+  <//>`;
+}
+
+// Настройки: пин-код и резервная копия, внизу версия
+function SettingsSheet({ jobs, onClose, onBackup, onRestore, pinOn, onPin }) {
+  return html`<${Sheet} onClose=${onClose} label="Настройки">
+    <h3>Настройки</h3>
+    <div class="field card">
       <span class="lbl">Пин-код при входе</span>
       ${pinOn ? html`<div class="two">
           <button type="button" className="btn" onClick=${() => onPin('change')}>Изменить</button>
@@ -227,8 +235,7 @@ function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onCl
         ? 'Включен. Спрашивается при запуске и если приложение было свернуто дольше 10 минут.'
         : 'Чтобы дети не открыли списки. Спрашивается при запуске и если приложение было свернуто дольше 10 минут.'}</span>
     </div>
-    <div class="section"><a className="btn block" href="help.html">Как пользоваться приложением</a></div>
-    <div class="field section">
+    <div class="field card">
       <span class="lbl">Резервная копия</span>
       <div class="two">
         <button type="button" className="btn" disabled=${!jobs.length} onClick=${onBackup}>Сохранить в файл</button>
@@ -309,7 +316,7 @@ function PinScreen({ record, onUnlock }) {
     <button type="button" className="pin-forgot" aria-expanded=${help} onClick=${() => setHelp(h => !h)}>Забыли пин-код?</button>
     ${help ? html`<div class="pin-help">
       <p>Пин-код нельзя восстановить. Снять его можно только вместе с данными приложения.</p>
-      <p>Удалятся все объекты и прайс работ. Потом верните их из резервной копии: «Объект ▾» → «Загрузить из файла».</p>
+      <p>Удалятся все объекты и прайс работ. Потом верните их из резервной копии: ⚙ вверху → «Загрузить из файла».</p>
     </div>` : null}
   </div>`;
 }
@@ -788,6 +795,7 @@ function App() {
           <span class="meta"><span class="eyebrow">Объект</span><span class="job-name">${job ? job.name : 'Не выбран'}</span></span>
           <${IconChev} />
         </button>
+        <button type="button" className="help-btn" aria-label="Настройки" title="Настройки" onClick=${() => setSheet({ type: 'settings' })}><${IconGear} /></button>
         <a className="help-btn" href="help.html" aria-label="Справка: как пользоваться приложением" title="Справка">?</a>
       </div>
       ${job && tab === 'catalog' ? html`<div class="search">
@@ -817,11 +825,12 @@ function App() {
       onSave=${(entry, qty, note) => { setItem(entry, qty, note); setSheet(null); setQuery(''); say(fullName(entry) + ' — ' + fmtQty(qty) + ' ' + entry.unit); }} />` : null}
     ${sheet && sheet.type === 'jobs' ? html`<${JobsSheet} jobs=${jobs} currentId=${job && job.id} readOnly=${false}
       onClose=${() => setSheet(null)} onPick=${id => { setCurrentId(id); setSheet(null); }}
-      onCreate=${createJob} onDelete=${deleteJob} onBackup=${backup} onRestore=${restore}
-      pinOn=${!!pinRec} onPin=${mode => setSheet({ type: 'pin', mode })}
+      onCreate=${createJob} onDelete=${deleteJob} onRestore=${restore}
       onRename=${(id, name, address) => { updateJob(id, j => Object.assign({}, j, { name, address })); setSheet(null); say('Сохранено'); }} />` : null}
     ${sheet && sheet.type === 'pin' ? html`<${PinSetupSheet} key=${'pin' + sheet.mode} mode=${sheet.mode} record=${pinRec}
       onClose=${() => setSheet(null)} onDone=${rec => pinDone(sheet.mode, rec)} />` : null}
+    ${sheet && sheet.type === 'settings' ? html`<${SettingsSheet} jobs=${jobs} onClose=${() => setSheet(null)}
+      onBackup=${backup} onRestore=${restore} pinOn=${!!pinRec} onPin=${mode => setSheet({ type: 'pin', mode })} />` : null}
     ${sheet && sheet.type === 'text' ? html`<${TextSheet} text=${sheet.text} onClose=${() => setSheet(null)} />` : null}
     ${sheet && sheet.type === 'work' && job ? html`<${WorkSheet} key=${'w' + sheet.work.id} work=${sheet.work} job=${job}
       onClose=${() => setSheet(null)}
