@@ -160,6 +160,24 @@ a.btn { text-decoration: none; color: var(--fg); }
 .toast-act { flex: none; min-height: 40px; padding: 0 14px; border: 1px solid currentColor; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
 .toast-timer { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: currentColor; opacity: .45; transform-origin: left; animation: undo-timer linear forwards; }
 @keyframes undo-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+/* Пин-код */
+.pin-screen { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: calc(24px + env(safe-area-inset-top, 0px)) 16px calc(24px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
+.pin-logo { width: 64px; height: 64px; border-radius: 16px; }
+.pin-screen h1 { margin: 0; font-size: 20px; }
+.pin-msg { margin: 0; color: var(--muted); text-align: center; min-height: 1.45em; }
+.pin { display: grid; justify-items: center; gap: 20px; }
+.sheet .pin { margin: 4px auto 6px; }
+.pin-dots { display: flex; gap: 16px; }
+.pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); }
+.pin-dot.on { background: var(--water); border-color: var(--water); }
+.pin-keys { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; }
+.pin-keys button { width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font-family: var(--font-mark); font-size: 26px; font-weight: 600; }
+.pin-keys button:active { background: var(--surface-2); }
+.pin-keys button:disabled { opacity: .45; }
+.pin-forgot { border: 0; background: none; color: var(--water); font-weight: 600; padding: 10px; }
+.pin-help { max-width: 340px; color: var(--muted); font-size: 14px; line-height: 1.45; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 4px 14px; }
+.pin-help p { margin: 10px 0; }
+.pin-help b { color: var(--fg); overflow-wrap: anywhere; }
 /* Работы */
 .works-hint { margin: 6px 0 12px; color: var(--muted); font-size: 14px; }
 .work-sum { margin: 0; font-family: var(--font-mark); font-weight: 600; font-size: 15px; color: var(--fg); }

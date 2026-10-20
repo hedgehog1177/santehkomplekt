@@ -369,6 +369,47 @@ function buildPriceListText(list) {
   return ['Прайс на работы', ''].concat(list.map(x => '• ' + x.name + ' — ' + (x.price == null ? 'договорная' : fmtMoney(x.price) + ' / ' + x.unit))).join('\n');
 }
 
+/* ---------- Пин-код при входе ---------- */
+// «Замок от детей»: не даёт случайно открыть списки. Не защита от взрослого с компьютером —
+// данные всё равно лежат в браузере. Сам пин не хранится: только отпечаток PBKDF2 со случайной солью
+const PIN_LEN = 4;
+const PIN_LOCK_AFTER = 10 * 60 * 1000; // свернули дольше — при возврате снова пин
+const PIN_MAX_TRIES = 5;               // столько неверных подряд — и пауза
+const PIN_PAUSE = 30 * 1000;
+const PIN_ITER = 100000;
+const isPin = s => new RegExp('^\\d{' + PIN_LEN + '}$').test(String(s));
+// Запереть ли при запуске: пин есть, а в этом сеансе ещё не открывали — или открыли, но свернули надолго
+function pinLockedOnStart({ hasPin, unlocked, hiddenAt, now }) {
+  if (!hasPin) return false;
+  if (!unlocked) return true;
+  return hiddenAt != null && now - hiddenAt >= PIN_LOCK_AFTER;
+}
+const pinLockedOnReturn = (hiddenAt, now) => hiddenAt != null && now - hiddenAt >= PIN_LOCK_AFTER;
+// Неверный пин: считаем попытки; на пятой — пауза, счётчик с нуля
+function pinFail(tries, now) {
+  const fails = ((tries && tries.fails) || 0) + 1;
+  return fails >= PIN_MAX_TRIES ? { fails: 0, until: now + PIN_PAUSE } : { fails, until: (tries && tries.until) || 0 };
+}
+// Сколько секунд ещё ждать (0 — можно вводить)
+const pinWait = (tries, now) => Math.max(0, Math.ceil((((tries && tries.until) || 0) - now) / 1000));
+const toHex = buf => Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('');
+const newSalt = () => toHex(globalThis.crypto.getRandomValues(new Uint8Array(16)));
+async function hashPin(pin, salt) {
+  const enc = new TextEncoder();
+  const key = await globalThis.crypto.subtle.importKey('raw', enc.encode(String(pin)), 'PBKDF2', false, ['deriveBits']);
+  const bits = await globalThis.crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode(salt), iterations: PIN_ITER }, key, 256);
+  return toHex(bits);
+}
+// Запись для хранения: { v, salt, hash } — без самого пина
+async function makePinRecord(pin, salt) {
+  const s = salt || newSalt();
+  return { v: 1, salt: s, hash: await hashPin(pin, s) };
+}
+async function checkPin(pin, record) {
+  if (!record || !isPin(pin)) return false;
+  return (await hashPin(pin, record.salt)) === record.hash;
+}
+
 /* ---------- Текст для мессенджера ---------- */
 function buildText(job, date) {
   const lines = ['Объект: ' + job.name];
@@ -390,6 +431,8 @@ return {
   applyItem, restoreItem, stepQty, bumpJob,
   WORK_UNITS, DEFAULT_WORKS, MAX_PRICE, CURRENCY, parsePrice, fmtMoney, priceInput, workEntry, lineSum, worksTotal, workLine,
   filterWorks, mergeWorkLists, buildClientText, buildPriceListText,
+  PIN_LEN, PIN_LOCK_AFTER, PIN_MAX_TRIES, PIN_PAUSE, isPin, pinLockedOnStart, pinLockedOnReturn, pinFail, pinWait,
+  hashPin, makePinRecord, checkPin,
   normalizeItems, normalizeJob, backupJobs, mergeJobs, buildText,
 };
 });

@@ -10,6 +10,7 @@ const {
   applyItem, restoreItem, stepQty, bumpJob, normalizeJob, backupJobs, mergeJobs,
   WORK_UNITS, DEFAULT_WORKS, CURRENCY, parsePrice, fmtMoney, priceInput, workEntry, lineSum, worksTotal,
   filterWorks, mergeWorkLists, buildClientText, buildPriceListText,
+  PIN_LEN, pinLockedOnStart, pinLockedOnReturn, pinFail, pinWait, makePinRecord, checkPin,
 } = SantehCore;
 
 const fuse = new Fuse(PARTS.map(x => Object.assign({}, x, { sizesText: x.sizes.join(' '), groupName: GROUP_NAME[x.group] })), {
@@ -37,6 +38,15 @@ const sizeView = s => String(s).split(/([½¾¼⅜⅝⅞])/).map((p, k) => (k % 
 const today = () => new Date().toLocaleDateString('ru-RU');
 const lsGet = k => Platform.storage.get(k);
 const lsSet = (k, v) => Platform.storage.set(k, v);
+const lsJSON = k => { try { return JSON.parse(lsGet(k) || 'null'); } catch (e) { return null; } };
+// Память на время сеанса (до закрытия приложения): отметка «пин уже вводили» и время сворачивания.
+// sessionStorage есть и в браузере, и во встроенном браузере Android-приложения
+const ss = {
+  get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) { /* без памяти сеанса пин спросят чаще — не страшно */ } },
+  del(k) { try { sessionStorage.removeItem(k); } catch (e) { /* то же */ } },
+};
+const PIN_KEY = 'santeh.pin.v1', PIN_TRIES_KEY = 'santeh.pin.tries';
 
 /* ---------- Иконки ---------- */
 const IconSearch = () => html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>`;
@@ -166,7 +176,7 @@ function RestoreButton({ onRestore }) {
     <input id="restore-file" type="file" accept=".json,application/json" hidden onChange=${e => { const f = e.target.files[0]; e.target.value = ''; if (f) onRestore(f); }} /></label>`;
 }
 
-function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onClose, readOnly, onBackup, onRestore }) {
+function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onClose, readOnly, onBackup, onRestore, pinOn, onPin }) {
   const cur = jobs.find(j => j.id === currentId);
   const [mode, setMode] = useState(jobs.length ? 'list' : 'new');
   const [name, setName] = useState(mode === 'edit' && cur ? cur.name : '');
@@ -215,6 +225,16 @@ function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onCl
       </div>
       <span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>Списки хранятся только на этом телефоне. Файл копии можно перенести на другой телефон.</span>
     </div>
+    <div class="field">
+      <span class="lbl">Пин-код при входе</span>
+      ${pinOn ? html`<div class="two">
+          <button type="button" className="btn" onClick=${() => onPin('change')}>Изменить</button>
+          <button type="button" className="btn" onClick=${() => onPin('off')}>Выключить</button>
+        </div>` : html`<button type="button" className="btn block" onClick=${() => onPin('on')}>Включить пин-код</button>`}
+      <span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>${pinOn
+        ? 'Включен. Спрашивается при запуске и если приложение было свернуто дольше 10 минут.'
+        : 'Чтобы дети не открыли списки. Спрашивается при запуске и если приложение было свернуто дольше 10 минут.'}</span>
+    </div>
     <a className="btn block" href="help.html">Как пользоваться приложением</a>
     <${AppVersion} />
   <//>`;
@@ -229,6 +249,107 @@ function TextSheet({ text, onClose }) {
     <h3>Текст списка</h3>
     <div class="sub">Буфер обмена недоступен. Текст выделен — скопируйте его вручную.</div>
     <textarea ref=${ref} className="textout" readOnly value=${text}></textarea>
+  <//>`;
+}
+
+/* ---------- Пин-код ---------- */
+// Точки и цифровые кнопки. Цифры можно вводить и с клавиатуры (на компьютере).
+// onChange получает функцию-обновление, как setState
+function PinPad({ value, onChange, disabled }) {
+  useEffect(() => {
+    const onKey = e => {
+      if (disabled) return;
+      if (/^\d$/.test(e.key)) { e.preventDefault(); onChange(v => (v.length < PIN_LEN ? v + e.key : v)); }
+      else if (e.key === 'Backspace') { e.preventDefault(); onChange(v => v.slice(0, -1)); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [disabled]);
+  const press = d => { if (!disabled) onChange(v => (v.length < PIN_LEN ? v + d : v)); };
+  return html`<div class="pin">
+    <div class="pin-dots" role="img" aria-label=${'Введено цифр: ' + value.length + ' из ' + PIN_LEN}>
+      ${Array.from({ length: PIN_LEN }, (_, k) => html`<span key=${k} className=${'pin-dot' + (k < value.length ? ' on' : '')}></span>`)}
+    </div>
+    <div class="pin-keys">
+      ${['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => html`<button type="button" key=${d} disabled=${disabled} onClick=${() => press(d)}>${d}</button>`)}
+      <span></span>
+      <button type="button" disabled=${disabled} onClick=${() => press('0')}>0</button>
+      <button type="button" aria-label="Стереть цифру" disabled=${disabled || !value} onClick=${() => onChange(v => v.slice(0, -1))}>⌫</button>
+    </div>
+  </div>`;
+}
+
+// Экран входа: пока пин не введён, списки не показываются
+function PinScreen({ record, onUnlock }) {
+  const [entry, setEntry] = useState('');
+  const [tries, setTries] = useState(() => lsJSON(PIN_TRIES_KEY));
+  const [now, setNow] = useState(Date.now());
+  const [error, setError] = useState('');
+  const [help, setHelp] = useState(false);
+  const wait = pinWait(tries, now);
+  useEffect(() => { if (!wait) return; const t = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(t); }, [wait > 0]);
+  useEffect(() => {
+    if (entry.length < PIN_LEN) return;
+    let alive = true;
+    const v = entry;
+    checkPin(v, record).then(ok => {
+      if (!alive) return;
+      if (ok) { lsSet(PIN_TRIES_KEY, ''); onUnlock(); return; }
+      const t = pinFail(tries, Date.now());
+      setTries(t); lsSet(PIN_TRIES_KEY, JSON.stringify(t)); setNow(Date.now());
+      setEntry(''); setError('Неверный пин-код');
+    });
+    return () => { alive = false; };
+  }, [entry]);
+  return html`<div class="pin-screen" role="dialog" aria-modal="true" aria-label="Вход по пин-коду">
+    <img class="pin-logo" src="icons/icon-192.png" alt="" />
+    <h1>Сантехкомплект</h1>
+    <p class="pin-msg" role="status">${wait ? 'Слишком много попыток. Подождите ' + wait + ' с' : error || 'Введите пин-код'}</p>
+    <${PinPad} value=${entry} onChange=${setEntry} disabled=${wait > 0} />
+    <button type="button" className="pin-forgot" aria-expanded=${help} onClick=${() => setHelp(h => !h)}>Забыли пин-код?</button>
+    ${help ? html`<div class="pin-help">
+      <p>Пин-код нельзя восстановить. Снять его можно только вместе с данными приложения:</p>
+      <p>Chrome → ⋮ → Настройки → Настройки сайтов → Все сайты → <b>${location.host}</b> → Удалить.</p>
+      <p>Удалятся все объекты и прайс работ. Потом верните их из резервной копии: «Объект ▾» → «Загрузить из файла».</p>
+    </div>` : null}
+  </div>`;
+}
+
+// Окно настройки пина: включить (придумать и повторить), изменить или выключить (сначала текущий)
+function PinSetupSheet({ mode, record, onDone, onClose }) {
+  const [step, setStep] = useState(mode === 'on' ? 'new' : 'current');
+  const [entry, setEntry] = useState('');
+  const [first, setFirst] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (entry.length < PIN_LEN || busy) return;
+    const v = entry;
+    setEntry('');
+    if (step === 'current') {
+      setBusy(true);
+      checkPin(v, record).then(ok => {
+        setBusy(false);
+        if (!ok) { setError('Неверный пин-код'); return; }
+        setError('');
+        if (mode === 'off') onDone(null); else setStep('new');
+      });
+    } else if (step === 'new') {
+      setFirst(v); setError(''); setStep('repeat');
+    } else if (v !== first) {
+      setFirst(''); setError('Не совпадает. Придумайте пин-код заново'); setStep('new');
+    } else {
+      setBusy(true);
+      makePinRecord(v).then(onDone);
+    }
+  }, [entry]);
+  const title = mode === 'off' ? 'Выключить пин-код' : mode === 'change' ? 'Изменить пин-код' : 'Включить пин-код';
+  const prompt = { current: 'Введите текущий пин-код', new: 'Придумайте пин-код из ' + PIN_LEN + ' цифр', repeat: 'Повторите пин-код' }[step];
+  return html`<${Sheet} onClose=${onClose} label=${title}>
+    <h3>${title}</h3>
+    <p class="pin-msg" role="status">${error || prompt}</p>
+    <${PinPad} value=${entry} onChange=${setEntry} disabled=${busy} />
+    ${step !== 'current' ? html`<span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>Если забудете пин-код, снять его можно только вместе с данными приложения. Держите резервную копию.</span>` : null}
   <//>`;
 }
 
@@ -462,6 +583,30 @@ function App() {
   const [query, setQuery] = useState('');
   const [workList, setWorkList] = useState(loadWorks);
   const [workQuery, setWorkQuery] = useState('');
+  // Пин-код: запись (отпечаток) и «заперто». При запуске — заперто, если пин есть и в этом сеансе его не вводили
+  // или приложение было свёрнуто дольше 10 минут. Перезагрузка при обновлении сеанс не обрывает
+  const [pinRec, setPinRec] = useState(() => lsJSON(PIN_KEY));
+  const [locked, setLocked] = useState(() => pinLockedOnStart({
+    hasPin: !!lsJSON(PIN_KEY), unlocked: ss.get('santeh.pin.ok') === '1',
+    hiddenAt: Number(ss.get('santeh.pin.hidden')) || null, now: Date.now(),
+  }));
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') { ss.set('santeh.pin.hidden', String(Date.now())); return; }
+      const hiddenAt = Number(ss.get('santeh.pin.hidden')) || null;
+      ss.del('santeh.pin.hidden');
+      if (lsJSON(PIN_KEY) && pinLockedOnReturn(hiddenAt, Date.now())) { ss.del('santeh.pin.ok'); setLocked(true); }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+  const unlock = () => { ss.set('santeh.pin.ok', '1'); ss.del('santeh.pin.hidden'); setLocked(false); };
+  function pinDone(mode, rec) {
+    lsSet(PIN_KEY, rec ? JSON.stringify(rec) : '');
+    if (rec) ss.set('santeh.pin.ok', '1'); // только что ввели — в этом сеансе больше не спрашиваем
+    setPinRec(rec); setSheet(null);
+    say(mode === 'off' ? 'Пин-код выключен' : mode === 'change' ? 'Пин-код изменен' : 'Пин-код включен');
+  }
   const [sheet, setSheet] = useState(null);
   const [toast, setToast] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
@@ -635,6 +780,8 @@ function App() {
       onClear=${() => { updateJob(job.id, j => Object.assign({}, j, { items: [], works: [] })); say('Список очищен'); }}
       onCopy=${copyText} onShare=${canShareText ? shareText : null} onExcel=${exportExcel} goCatalog=${() => setTab('catalog')} />`;
 
+  if (locked && pinRec) return html`<${PinScreen} record=${pinRec} onUnlock=${unlock} />`;
+
   return html`<div class="wrap">
     <header class="top">
       <div class="top-row">
@@ -672,7 +819,10 @@ function App() {
     ${sheet && sheet.type === 'jobs' ? html`<${JobsSheet} jobs=${jobs} currentId=${job && job.id} readOnly=${false}
       onClose=${() => setSheet(null)} onPick=${id => { setCurrentId(id); setSheet(null); }}
       onCreate=${createJob} onDelete=${deleteJob} onBackup=${backup} onRestore=${restore}
+      pinOn=${!!pinRec} onPin=${mode => setSheet({ type: 'pin', mode })}
       onRename=${(id, name, address) => { updateJob(id, j => Object.assign({}, j, { name, address })); setSheet(null); say('Сохранено'); }} />` : null}
+    ${sheet && sheet.type === 'pin' ? html`<${PinSetupSheet} key=${'pin' + sheet.mode} mode=${sheet.mode} record=${pinRec}
+      onClose=${() => setSheet(null)} onDone=${rec => pinDone(sheet.mode, rec)} />` : null}
     ${sheet && sheet.type === 'text' ? html`<${TextSheet} text=${sheet.text} onClose=${() => setSheet(null)} />` : null}
     ${sheet && sheet.type === 'work' && job ? html`<${WorkSheet} key=${'w' + sheet.work.id} work=${sheet.work} job=${job}
       onClose=${() => setSheet(null)}
