@@ -312,11 +312,11 @@ function parsePrice(s) {
   if (!isFinite(n) || n <= 0) return null;
   return Math.min(Math.round(n * 100) / 100, MAX_PRICE);
 }
-// «1 500 $», «1 500,50 $» (неразрывные пробелы), null — «договорная»
+// «$1 500», «$1 500,50» — знак перед числом, тысячи через неразрывный пробел; null — «договорная»
 function fmtMoney(n) {
   if (n == null) return 'договорная';
   const [i, f] = String(Math.round(n * 100) / 100).split('.');
-  return i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (f ? ',' + f.padEnd(2, '0') : '') + ' ' + CURRENCY;
+  return CURRENCY + i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (f ? ',' + f.padEnd(2, '0') : '');
 }
 // Цена в поле ввода: 1500 → «1500», 1500.5 → «1500,5»; null → пусто
 const priceInput = n => (n == null ? '' : String(n).replace('.', ','));
@@ -329,7 +329,7 @@ function worksTotal(works) {
   (works || []).forEach(i => { const s = lineSum(i); if (s == null) unpriced++; else sum += s; });
   return { sum: Math.round(sum * 100) / 100, unpriced, count: (works || []).length };
 }
-// «2 шт × 1 500 $ = 3 000 $» или «1 шт, цена договорная»
+// «2 шт × $1 500 = $3 000» или «1 шт, цена договорная»
 const workLine = i => fmtQty(i.qty) + ' ' + i.unit + (i.price == null ? ', цена договорная' : ' × ' + fmtMoney(i.price) + ' = ' + fmtMoney(lineSum(i)));
 // Поиск по своему прайсу: все слова запроса, без разницы е/ё и регистра
 const fold = s => String(s).toLowerCase().replace(/ё/g, 'е');
@@ -364,7 +364,7 @@ function buildClientText(job, date) {
   else lines.push('Итого за работы: ' + fmtMoney(t.sum) + (t.unpriced ? ' (без договорных: ' + t.unpriced + ')' : ''));
   return lines.join('\n');
 }
-// Свой прайс текстом: «• Замена смесителя — 1 500 $ / шт»
+// Свой прайс текстом: «• Замена смесителя — $1 500 / шт»
 function buildPriceListText(list) {
   return ['Прайс на работы', ''].concat(list.map(x => '• ' + x.name + ' — ' + (x.price == null ? 'договорная' : fmtMoney(x.price) + ' / ' + x.unit))).join('\n');
 }

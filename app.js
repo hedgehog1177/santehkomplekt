@@ -360,7 +360,7 @@ function jobCount(j) {
   const parts = [n || !m ? n + ' ' + plural(n, 'позиция', 'позиции', 'позиций') : null, m ? m + ' ' + plural(m, 'работа', 'работы', 'работ') : null];
   return parts.filter(Boolean).join(' · ');
 }
-// Итог по работам для заголовка блока: «3 000 $», «3 000 $ + договорные», «договорная»
+// Итог по работам для заголовка блока: «$3 000», «$3 000 + договорные», «договорная»
 function worksTotalText(works) {
   const t = worksTotal(works);
   return t.unpriced === t.count ? 'договорная' : fmtMoney(t.sum) + (t.unpriced ? ' + договорные' : '');
