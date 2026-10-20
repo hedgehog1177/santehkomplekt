@@ -64,7 +64,7 @@ test('работа в объекте: добавить, изменить, «+/�
   works = C.applyItem(works, works[0], C.stepQty(works[0], 1), undefined, 30);
   assert.deepEqual([works[0].qty, works[0].price, works[0].note], [3, 1800, 'без демонтажа']);
   // «Вернуть» после «−» до нуля
-  const one = C.applyItem([], C.workEntry(W('w-01'), 2000), 1, '', 1);
+  const one = C.applyItem([], C.workEntry(W('w-02'), 2000), 1, '', 1);
   const removed = one[0];
   const empty = C.applyItem(one, removed, C.stepQty(removed, -1), undefined, 2);
   assert.deepEqual(empty, []);
