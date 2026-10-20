@@ -160,6 +160,18 @@ function parseQty(s, unit) {
   return Math.min(n, MAX_QTY);
 }
 const plural = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c); };
+// Единицы полным словом склоняются по числу: «2 часа», «5 точек», с дробью — «1,5 часа».
+// Сокращения (шт, м, компл…) не меняются
+const UNIT_FORMS = { 'час': ['час', 'часа', 'часов'], 'точка': ['точка', 'точки', 'точек'] };
+function unitFor(n, unit) {
+  const f = UNIT_FORMS[unit];
+  if (!f) return unit;
+  const r = Math.round(n * 100) / 100;
+  return Number.isInteger(r) ? plural(r, f[0], f[1], f[2]) : f[1];
+}
+const qtyUnit = (n, unit) => fmtQty(n) + ' ' + unitFor(n, unit);
+// «Цена за точку», «За точку»
+const unitPer = unit => (unit === 'точка' ? 'точку' : unit);
 const fullName = it => it.name + (it.size ? ' ' + it.size : '');
 const findItem = (items, pid, size) => items.find(i => i.key === keyOf(pid, size));
 const groupOf = i => i.group || (PART_BY_ID[i.pid] && PART_BY_ID[i.pid].group) || OWN.id;
@@ -196,7 +208,7 @@ function qtyForm(part, items, size, qtyText, readOnly) {
   return {
     existing, n,
     canSave: !readOnly && n > 0,
-    label: (existing ? 'Сохранить' : 'Добавить в список') + ' · ' + fmtQty(n) + ' ' + part.unit,
+    label: (existing ? 'Сохранить' : 'Добавить в список') + ' · ' + qtyUnit(n, part.unit),
   };
 }
 
@@ -207,7 +219,7 @@ function rowState(part, items) {
   const single = got.length === 1 && part.sizes.length === 1 ? got[0] : null;
   return {
     onSizes: new Set(got.map(g => g.size)),
-    badge: !got.length ? null : single ? fmtQty(single.qty) + ' ' + part.unit : got.length + ' поз.',
+    badge: !got.length ? null : single ? qtyUnit(single.qty, part.unit) : got.length + ' поз.',
   };
 }
 
@@ -267,6 +279,18 @@ const normalizeJob = j => Object.assign({ items: [], works: [] }, j, {
   items: normalizeItems(j.items),
   works: Array.isArray(j.works) ? j.works : [],
 });
+// Пример для первого запуска. updatedAt: 0 — нетронутый пример «старше» любой копии: на новом телефоне
+// или после удаления данных «Пример» из резервной копии (возможно, уже переименованный и с работами)
+// заменяет свежий пример, а не отбрасывается. Первая правка ставит настоящее время, как у любого объекта
+function exampleJob(t) {
+  let k = 0; // у каждой позиции своё время добавления — порядок в группе однозначный
+  const add = (pid, size, qty, note) => { const pt = PART_BY_ID[pid]; return { key: keyOf(pid, size), pid, name: pt.name, size, unit: pt.unit, group: pt.group, qty, note: note || '', at: t + k++ }; };
+  return { id: 'example-1', name: 'Пример: кв. 45, санузел', address: 'Пример — удалите или переименуйте', createdAt: t, updatedAt: 0, works: [], items: [
+    add('ppr', 'Ø20', 12), add('ppr-90', 'Ø20', 10), add('ppr-tee', 'Ø20', 4), add('ppr-wall', '20×½" ВР', 4),
+    add('v-ff', '½"', 2, 'на вводе ХВС и ГВС'), add('m-cnt', 'ХВС', 1), add('m-cnt', 'ГВС', 1),
+    add('s-pipe', 'Ø50×1000', 3), add('s-87', 'Ø50', 4), add('h-flex', '40 см', 2), add('c-fum', '19 мм × 15 м', 2),
+  ] };
+}
 // Объекты из файла копии или null, если это не копия Сантехкомплекта
 function backupJobs(data) {
   const incoming = Array.isArray(data) ? data : data && data.jobs;
@@ -330,7 +354,7 @@ function worksTotal(works) {
   return { sum: Math.round(sum * 100) / 100, unpriced, count: (works || []).length };
 }
 // «2 шт × $1 500 = $3 000» или «1 шт, цена договорная»
-const workLine = i => fmtQty(i.qty) + ' ' + i.unit + (i.price == null ? ', цена договорная' : ' × ' + fmtMoney(i.price) + ' = ' + fmtMoney(lineSum(i)));
+const workLine = i => qtyUnit(i.qty, i.unit) + (i.price == null ? ', цена договорная' : ' × ' + fmtMoney(i.price) + ' = ' + fmtMoney(lineSum(i)));
 // Поиск по своему прайсу: все слова запроса, без разницы е/ё и регистра
 const fold = s => String(s).toLowerCase().replace(/ё/g, 'е');
 function filterWorks(list, q) {
@@ -417,7 +441,7 @@ function buildText(job, date) {
   lines.push('Дата: ' + date, '');
   sortedGroups(job.items).forEach(g => {
     lines.push(g.name.toUpperCase());
-    g.items.forEach(i => lines.push('• ' + fullName(i) + ' — ' + fmtQty(i.qty) + ' ' + i.unit + (i.note ? ' (' + i.note + ')' : '')));
+    g.items.forEach(i => lines.push('• ' + fullName(i) + ' — ' + qtyUnit(i.qty, i.unit) + (i.note ? ' (' + i.note + ')' : '')));
     lines.push('');
   });
   lines.push('Всего позиций: ' + job.items.length);
@@ -426,9 +450,9 @@ function buildText(job, date) {
 
 return {
   CATALOG, OWN, GROUP_ORDER, GROUP_NAME, PARTS, PART_BY_ID, UNITS, INT_UNITS, PRESETS, MAX_QTY, SIZE_RENAMES,
-  keyOf, fmtQty, parseQty, plural, fullName, findItem, groupOf, sortedGroups,
+  keyOf, fmtQty, parseQty, plural, unitFor, qtyUnit, unitPer, fullName, findItem, groupOf, sortedGroups,
   initialSize, formFor, switchSize, qtyForm, rowState,
-  applyItem, restoreItem, stepQty, bumpJob,
+  applyItem, restoreItem, stepQty, bumpJob, exampleJob,
   WORK_UNITS, DEFAULT_WORKS, MAX_PRICE, CURRENCY, parsePrice, fmtMoney, priceInput, workEntry, lineSum, worksTotal, workLine,
   filterWorks, mergeWorkLists, buildClientText, buildPriceListText,
   PIN_LEN, PIN_LOCK_AFTER, PIN_MAX_TRIES, PIN_PAUSE, isPin, pinLockedOnStart, pinLockedOnReturn, pinFail, pinWait,

@@ -5,7 +5,7 @@ const html = htm.bind(React.createElement);
 // Каталог и правила работы со списком — в core.js (там же их проверяют тесты)
 const {
   CATALOG, OWN, GROUP_ORDER, GROUP_NAME, PARTS, PART_BY_ID, UNITS, PRESETS,
-  keyOf, fmtQty, parseQty, plural, fullName, findItem, groupOf, sortedGroups,
+  keyOf, fmtQty, parseQty, plural, unitFor, qtyUnit, unitPer, fullName, findItem, groupOf, sortedGroups,
   initialSize, formFor, switchSize, qtyForm, rowState,
   applyItem, restoreItem, stepQty, bumpJob, normalizeJob, backupJobs, mergeJobs,
   WORK_UNITS, DEFAULT_WORKS, CURRENCY, parsePrice, fmtMoney, priceInput, workEntry, lineSum, worksTotal,
@@ -88,7 +88,7 @@ function QtyInput({ value, onChange, unit }) {
     <label class="val">
       <input id="qty-input" inputMode="decimal" enterKeyHint="done" autoComplete="off" aria-label="Количество" value=${value}
         onFocus=${e => e.target.select()} onChange=${e => onChange(e.target.value)} />
-      <span class="unit">${unit}</span>
+      <span class="unit">${unitFor(n, unit)}</span>
     </label>
     <button type="button" aria-label="Больше" onClick=${() => onChange(fmtQty(n + step))}>+</button>
   </div>
@@ -160,7 +160,7 @@ function OwnSheet({ onClose, onSave, readOnly, initialName }) {
     <div class="field"><span class="lbl">Количество</span><${QtyInput} value=${qty} onChange=${setQty} unit=${unit} /></div>
     <div class="field"><label class="lbl" htmlFor="own-note">Примечание</label>
       <input id="own-note" enterKeyHint="done" value=${note} onChange=${e => setNote(e.target.value)} /></div>
-    <button type="submit" className="btn primary block" disabled=${!ok}>Добавить в список · ${fmtQty(n)} ${unit}</button>
+    <button type="submit" className="btn primary block" disabled=${!ok}>Добавить в список · ${qtyUnit(n, unit)}</button>
   </form><//>`;
 }
 
@@ -395,7 +395,7 @@ function WorksView({ list, job, query, onQuery, onPick, onNew, onSharePrice }) {
           <span class="name">${x.name}</span>
           <span class="spec">${x.price == null ? 'цена договорная' : fmtMoney(x.price) + ' / ' + x.unit}</span>
         </span>
-        ${got ? html`<span class="badge">${fmtQty(got.qty)} ${got.unit}</span>` : html`<span class="plus" aria-hidden="true">+</span>`}
+        ${got ? html`<span class="badge">${qtyUnit(got.qty, got.unit)}</span>` : html`<span class="plus" aria-hidden="true">+</span>`}
       </button>`;
     })}</div>` : html`<p class="found">${list.length ? 'В прайсе ничего не нашлось.' : 'Прайс пуст.'}</p>`}
     <button type="button" className="add-own" onClick=${() => onNew(q)}>+ Новая работа${q ? ' «' + q + '»' : ''}</button>
@@ -417,7 +417,7 @@ function WorkSheet({ work, job, onClose, onSave, onEdit }) {
   const save = () => onSave(workEntry(work, p), n, note.trim(), remember ? p : undefined);
   return html`<${Sheet} onClose=${onClose} label=${work.name}><form onSubmit=${e => { e.preventDefault(); if (canSave) save(); }}>
     <h3>${work.name}</h3>
-    <div class="field"><label class="lbl" htmlFor="work-price">Цена за ${work.unit}, ${CURRENCY}</label>
+    <div class="field"><label class="lbl" htmlFor="work-price">Цена за ${unitPer(work.unit)}, ${CURRENCY}</label>
       <input id="work-price" inputMode="decimal" enterKeyHint="done" autoComplete="off" placeholder="договорная" value=${price} onChange=${e => setPrice(e.target.value)} />
       ${remember ? html`<span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>Цена запомнится в прайсе</span>` : null}</div>
     <div class="field"><span class="lbl">Количество</span><${QtyInput} value=${qty} onChange=${setQty} unit=${work.unit} /></div>
@@ -425,7 +425,7 @@ function WorkSheet({ work, job, onClose, onSave, onEdit }) {
       <input id="work-note" enterKeyHint="done" placeholder="Например: без демонтажа" value=${note} onChange=${e => setNote(e.target.value)} /></div>
     <p class="work-sum">${sum == null ? 'Цена договорная' : 'Сумма: ' + fmtMoney(sum)}</p>
     <div class="sheet-actions">
-      <button type="submit" className="btn primary block" disabled=${!canSave}>${existing ? 'Сохранить' : 'Добавить в объект'} · ${fmtQty(n)} ${work.unit}</button>
+      <button type="submit" className="btn primary block" disabled=${!canSave}>${existing ? 'Сохранить' : 'Добавить в объект'} · ${qtyUnit(n, work.unit)}</button>
       ${existing ? html`<button type="button" className="btn danger block" onClick=${() => onSave({ pid: 'w:' + work.id, size: '', name: work.name }, 0)}>Убрать из объекта</button>` : null}
       ${onEdit ? html`<button type="button" className="btn block" onClick=${onEdit}>Изменить в прайсе</button>` : null}
     </div>
@@ -447,7 +447,7 @@ function EditWorkSheet({ work, initialName, onClose, onSave, onDelete }) {
       <div class="field"><label class="lbl" htmlFor="wk-price">Цена, ${CURRENCY}</label>
         <input id="wk-price" inputMode="decimal" enterKeyHint="done" autoComplete="off" placeholder="договорная" value=${price} onChange=${e => setPrice(e.target.value)} /></div>
       <div class="field"><label class="lbl" htmlFor="wk-unit">За</label>
-        <select id="wk-unit" value=${unit} onChange=${e => setUnit(e.target.value)}>${WORK_UNITS.map(u => html`<option key=${u} value=${u}>${u}</option>`)}</select></div>
+        <select id="wk-unit" value=${unit} onChange=${e => setUnit(e.target.value)}>${WORK_UNITS.map(u => html`<option key=${u} value=${u}>${unitPer(u)}</option>`)}</select></div>
     </div>
     <span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>Пустая цена — «договорная». В объектах, куда работа уже добавлена, цена не изменится.</span>
     <div class="sheet-actions">
@@ -527,7 +527,7 @@ function ListView({ job, onEdit, onStep, onEditWork, onStepWork, onClientText, o
         </button>
         <div class="step">
           <button type="button" aria-label=${'Уменьшить: ' + fullName(i)} disabled=${readOnly} onClick=${() => onStep(i, -1)}>−</button>
-          <span class="v">${fmtQty(i.qty)}<small>${i.unit}</small></span>
+          <span class="v">${fmtQty(i.qty)}<small>${unitFor(i.qty, i.unit)}</small></span>
           <button type="button" aria-label=${'Увеличить: ' + fullName(i)} disabled=${readOnly} onClick=${() => onStep(i, 1)}>+</button>
         </div>
       </div>`)}</div>
@@ -542,7 +542,7 @@ function ListView({ job, onEdit, onStep, onEditWork, onStepWork, onClientText, o
         </button>
         <div class="step">
           <button type="button" aria-label=${'Уменьшить: ' + i.name} disabled=${readOnly} onClick=${() => onStepWork(i, -1)}>−</button>
-          <span class="v">${fmtQty(i.qty)}<small>${i.unit}</small></span>
+          <span class="v">${fmtQty(i.qty)}<small>${unitFor(i.qty, i.unit)}</small></span>
           <button type="button" aria-label=${'Увеличить: ' + i.name} disabled=${readOnly} onClick=${() => onStepWork(i, 1)}>+</button>
         </div>
       </div>`)}</div>
@@ -560,16 +560,7 @@ function loadJobs() {
   } catch (e) { /* повреждённые данные — начнём с примера */ }
   return null;
 }
-function exampleJob() {
-  const t = Date.now();
-  let k = 0; // у каждой позиции своё время добавления — порядок в группе однозначный
-  const add = (pid, size, qty, note) => { const pt = PART_BY_ID[pid]; return { key: keyOf(pid, size), pid, name: pt.name, size, unit: pt.unit, group: pt.group, qty, note: note || '', at: t + k++ }; };
-  return { id: 'example-1', name: 'Пример: кв. 45, санузел', address: 'Пример — удалите или переименуйте', createdAt: t, updatedAt: t, items: [
-    add('ppr', 'Ø20', 12), add('ppr-90', 'Ø20', 10), add('ppr-tee', 'Ø20', 4), add('ppr-wall', '20×½" ВР', 4),
-    add('v-ff', '½"', 2, 'на вводе ХВС и ГВС'), add('m-cnt', 'ХВС', 1), add('m-cnt', 'ГВС', 1),
-    add('s-pipe', 'Ø50×1000', 3), add('s-87', 'Ø50', 4), add('h-flex', '40 см', 2), add('c-fum', '19 мм × 15 м', 2),
-  ] };
-}
+const exampleJob = () => SantehCore.exampleJob(Date.now());
 const safeName = s => s.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 120);
 // Свой прайс работ. Нет сохранённого — стартовый список типовых работ без цен
 const WORKS_KEY = 'santeh.works.v1';
@@ -820,9 +811,9 @@ function App() {
     ${sheet && sheet.type === 'qty' && job ? html`<${QtySheet} key=${sheet.part.id + (sheet.size || '')} part=${sheet.part} job=${job} lockedSize=${sheet.size} readOnly=${false}
       onClose=${() => setSheet(null)}
       onSave=${(entry, qty, note) => { setItem(entry, qty, note); setSheet(null);
-        say(qty > 0 ? fullName(entry) + ' — ' + fmtQty(qty) + ' ' + entry.unit : 'Убрано из списка'); }} />` : null}
+        say(qty > 0 ? fullName(entry) + ' — ' + qtyUnit(qty, entry.unit) : 'Убрано из списка'); }} />` : null}
     ${sheet && sheet.type === 'own' && job ? html`<${OwnSheet} initialName=${sheet.name} readOnly=${false} onClose=${() => setSheet(null)}
-      onSave=${(entry, qty, note) => { setItem(entry, qty, note); setSheet(null); setQuery(''); say(fullName(entry) + ' — ' + fmtQty(qty) + ' ' + entry.unit); }} />` : null}
+      onSave=${(entry, qty, note) => { setItem(entry, qty, note); setSheet(null); setQuery(''); say(fullName(entry) + ' — ' + qtyUnit(qty, entry.unit)); }} />` : null}
     ${sheet && sheet.type === 'jobs' ? html`<${JobsSheet} jobs=${jobs} currentId=${job && job.id} readOnly=${false}
       onClose=${() => setSheet(null)} onPick=${id => { setCurrentId(id); setSheet(null); }}
       onCreate=${createJob} onDelete=${deleteJob} onRestore=${restore}
@@ -839,7 +830,7 @@ function App() {
         setWork(entry, qty, note);
         if (rememberPrice !== undefined) saveWork(entry.wid, { price: rememberPrice });
         setSheet(null);
-        say(qty > 0 ? entry.name + ' — ' + fmtQty(qty) + ' ' + entry.unit : 'Убрано из объекта');
+        say(qty > 0 ? entry.name + ' — ' + qtyUnit(qty, entry.unit) : 'Убрано из объекта');
       }} />` : null}
     ${sheet && sheet.type === 'editWork' ? html`<${EditWorkSheet} key=${'e' + (sheet.work ? sheet.work.id : 'new')} work=${sheet.work} initialName=${sheet.name}
       onClose=${() => setSheet(null)}
