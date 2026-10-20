@@ -218,14 +218,6 @@ function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onCl
       <button type="button" className="btn primary" disabled=${readOnly} onClick=${() => { setName(''); setAddr(''); setMode('new'); }}>+ Новый объект</button>
     </div>
     <div class="field">
-      <span class="lbl">Резервная копия</span>
-      <div class="two">
-        <button type="button" className="btn" disabled=${!jobs.length} onClick=${onBackup}>Сохранить в файл</button>
-        <${RestoreButton} onRestore=${onRestore} />
-      </div>
-      <span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>Списки хранятся только на этом телефоне. Файл копии можно перенести на другой телефон.</span>
-    </div>
-    <div class="field">
       <span class="lbl">Пин-код при входе</span>
       ${pinOn ? html`<div class="two">
           <button type="button" className="btn" onClick=${() => onPin('change')}>Изменить</button>
@@ -236,6 +228,14 @@ function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onCl
         : 'Чтобы дети не открыли списки. Спрашивается при запуске и если приложение было свернуто дольше 10 минут.'}</span>
     </div>
     <a className="btn block" href="help.html">Как пользоваться приложением</a>
+    <div class="field">
+      <span class="lbl">Резервная копия</span>
+      <div class="two">
+        <button type="button" className="btn" disabled=${!jobs.length} onClick=${onBackup}>Сохранить в файл</button>
+        <${RestoreButton} onRestore=${onRestore} />
+      </div>
+      <span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>Списки хранятся только на этом телефоне. Файл копии можно перенести на другой телефон.</span>
+    </div>
     <${AppVersion} />
   <//>`;
 }
