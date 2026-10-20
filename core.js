@@ -361,7 +361,7 @@ function buildClientText(job, date) {
   works.slice().sort((a, b) => (a.at || 0) - (b.at || 0)).forEach(i => lines.push('• ' + i.name + ' — ' + workLine(i) + (i.note ? ' (' + i.note + ')' : '')));
   lines.push('');
   if (t.unpriced === t.count) lines.push('Стоимость работ — договорная');
-  else lines.push('Итого за работы: ' + fmtMoney(t.sum) + (t.unpriced ? ' (без договорных: ' + t.unpriced + ')' : ''));
+  else lines.push('Итого за работы: ' + fmtMoney(t.sum) + (t.unpriced ? ' + ' + t.unpriced + ' ' + plural(t.unpriced, 'работа', 'работы', 'работ') + ' по договорной цене' : ''));
   return lines.join('\n');
 }
 // Свой прайс текстом: «• Замена смесителя — $1 500 / шт»

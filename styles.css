@@ -91,7 +91,7 @@ button { cursor: pointer; }
 .summary h1 { margin: 0; font-size: 20px; text-wrap: balance; }
 .summary .count { color: var(--muted); font-size: 14px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 14px; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 14px; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; text-align: center; gap: 6px; }
 .btn.primary { background: var(--water); color: var(--water-fg); border-color: var(--water); }
 .btn.danger { color: var(--danger); }
 .btn.danger.armed { background: var(--danger-soft); border-color: var(--danger); }
