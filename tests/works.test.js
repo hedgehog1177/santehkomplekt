@@ -22,7 +22,7 @@ test('прайс работ: стартовый список', () => {
 test('цена: разбор ввода', () => {
   const cases = [
     ['', null], ['0', null], ['abc', null], ['-5', 5],
-    ['1500', 1500], ['1 500', 1500], ['1500 ₽', 1500], ['1500 руб', 1500], ['1500 руб.', 1500],
+    ['1500', 1500], ['1 500', 1500], ['1500 ₽', 1500], ['1500 $', 1500], ['$1500', 1500], ['1500 руб', 1500], ['1500 руб.', 1500],
     ['1500,5', 1500.5], ['1500.555', 1500.56], ['99999999', C.MAX_PRICE],
   ];
   cases.forEach(([s, want]) => assert.equal(C.parsePrice(s), want, `«${s}» → ${want}`));
@@ -31,10 +31,10 @@ test('цена: разбор ввода', () => {
 });
 
 test('цена: вывод', () => {
-  assert.equal(C.fmtMoney(1500), '1' + NB + '500' + NB + '₽');
-  assert.equal(C.fmtMoney(1500.5), '1' + NB + '500,50' + NB + '₽');
-  assert.equal(C.fmtMoney(950), '950' + NB + '₽');
-  assert.equal(C.fmtMoney(1234567), '1' + NB + '234' + NB + '567' + NB + '₽');
+  assert.equal(C.fmtMoney(1500), '1' + NB + '500' + NB + '$');
+  assert.equal(C.fmtMoney(1500.5), '1' + NB + '500,50' + NB + '$');
+  assert.equal(C.fmtMoney(950), '950' + NB + '$');
+  assert.equal(C.fmtMoney(1234567), '1' + NB + '234' + NB + '567' + NB + '$');
   assert.equal(C.fmtMoney(null), 'договорная');
   assert.equal(C.priceInput(1500.5), '1500,5');
   assert.equal(C.priceInput(null), '');
@@ -45,7 +45,7 @@ test('работа в объекте: строка и итог', () => {
   assert.equal(C.lineSum(a), 3000);
   assert.equal(C.lineSum(b), null);
   assert.equal(C.lineSum(c), 2401.5);
-  assert.equal(C.workLine(a), '2 шт × 1' + NB + '500' + NB + '₽ = 3' + NB + '000' + NB + '₽');
+  assert.equal(C.workLine(a), '2 шт × 1' + NB + '500' + NB + '$ = 3' + NB + '000' + NB + '$');
   assert.equal(C.workLine(b), '1 шт, цена договорная');
   assert.deepEqual(C.worksTotal([a, b, c]), { sum: 5401.5, unpriced: 1, count: 3 });
   assert.deepEqual(C.worksTotal([]), { sum: 0, unpriced: 0, count: 0 });
@@ -105,15 +105,15 @@ test('текст для клиента и прайс текстом', () => {
   ] };
   assert.equal(C.buildClientText(job, '20.10.2026'), [
     'Объект: Кв. 12', 'Адрес: ул. Садовая, 1', 'Дата: 20.10.2026', '', 'РАБОТЫ',
-    '• Замена смесителя — 2 шт × 1' + NB + '500' + NB + '₽ = 3' + NB + '000' + NB + '₽ (без демонтажа)',
+    '• Замена смесителя — 2 шт × 1' + NB + '500' + NB + '$ = 3' + NB + '000' + NB + '$ (без демонтажа)',
     '• Прочистка канализации — 1 шт, цена договорная', '',
-    'Итого за работы: 3' + NB + '000' + NB + '₽ (без договорных: 1)',
+    'Итого за работы: 3' + NB + '000' + NB + '$ (без договорных: 1)',
   ].join('\n'));
   assert.ok(!C.buildClientText(job, 'x').includes('Муфта'), 'детали в текст для клиента не попадают');
   const onlyDeal = { name: 'Б', works: [line(W('w-20'), 1, null)] };
   assert.ok(C.buildClientText(onlyDeal, 'x').endsWith('Стоимость работ — договорная'));
   assert.equal(C.buildPriceListText([Object.assign({}, W('w-03'), { price: 1500 }), W('w-20')]),
-    'Прайс на работы\n\n• Замена смесителя — 1' + NB + '500' + NB + '₽ / шт\n• Прочистка канализации — договорная');
+    'Прайс на работы\n\n• Замена смесителя — 1' + NB + '500' + NB + '$ / шт\n• Прочистка канализации — договорная');
 });
 
 test('объект: работы в копии и в старых данных', () => {

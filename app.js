@@ -8,7 +8,7 @@ const {
   keyOf, fmtQty, parseQty, plural, fullName, findItem, groupOf, sortedGroups,
   initialSize, formFor, switchSize, qtyForm, rowState,
   applyItem, restoreItem, stepQty, bumpJob, normalizeJob, backupJobs, mergeJobs,
-  WORK_UNITS, DEFAULT_WORKS, parsePrice, fmtMoney, priceInput, workEntry, lineSum, worksTotal,
+  WORK_UNITS, DEFAULT_WORKS, CURRENCY, parsePrice, fmtMoney, priceInput, workEntry, lineSum, worksTotal,
   filterWorks, mergeWorkLists, buildClientText, buildPriceListText,
 } = SantehCore;
 
@@ -161,18 +161,6 @@ function AppVersion() {
   return v ? html`<p class="app-version">${v}</p>` : null;
 }
 
-// Тема оформления: по умолчанию тёмная, выбор запоминается на телефоне (theme.js)
-function ThemePicker() {
-  const [mode, setMode] = useState(() => SantehTheme.read());
-  return html`<div class="field">
-    <span class="lbl" id="theme-lbl">Тема</span>
-    <div class="sizes theme-pick" role="group" aria-labelledby="theme-lbl">
-      ${SantehTheme.MODES.map(m => html`<button type="button" key=${m.id} className="size" aria-pressed=${m.id === mode}
-        onClick=${() => setMode(SantehTheme.set(m.id))}>${m.label}</button>`)}
-    </div>
-  </div>`;
-}
-
 function RestoreButton({ onRestore }) {
   return html`<label className="btn" style=${{ justifyContent: 'center' }}>Загрузить из файла
     <input id="restore-file" type="file" accept=".json,application/json" hidden onChange=${e => { const f = e.target.files[0]; e.target.value = ''; if (f) onRestore(f); }} /></label>`;
@@ -227,7 +215,6 @@ function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onCl
       </div>
       <span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>Списки хранятся только на этом телефоне. Файл копии можно перенести на другой телефон.</span>
     </div>
-    <${ThemePicker} />
     <a className="btn block" href="help.html">Как пользоваться приложением</a>
     <${AppVersion} />
   <//>`;
@@ -252,7 +239,7 @@ function jobCount(j) {
   const parts = [n || !m ? n + ' ' + plural(n, 'позиция', 'позиции', 'позиций') : null, m ? m + ' ' + plural(m, 'работа', 'работы', 'работ') : null];
   return parts.filter(Boolean).join(' · ');
 }
-// Итог по работам для заголовка блока: «3 000 ₽», «3 000 ₽ + договорные», «договорная»
+// Итог по работам для заголовка блока: «3 000 $», «3 000 $ + договорные», «договорная»
 function worksTotalText(works) {
   const t = worksTotal(works);
   return t.unpriced === t.count ? 'договорная' : fmtMoney(t.sum) + (t.unpriced ? ' + договорные' : '');
@@ -303,7 +290,7 @@ function WorkSheet({ work, job, onClose, onSave, onEdit }) {
   const save = () => onSave(workEntry(work, p), n, note.trim(), remember ? p : undefined);
   return html`<${Sheet} onClose=${onClose} label=${work.name}><form onSubmit=${e => { e.preventDefault(); if (canSave) save(); }}>
     <h3>${work.name}</h3>
-    <div class="field"><label class="lbl" htmlFor="work-price">Цена за ${work.unit}, ₽</label>
+    <div class="field"><label class="lbl" htmlFor="work-price">Цена за ${work.unit}, ${CURRENCY}</label>
       <input id="work-price" inputMode="decimal" enterKeyHint="done" autoComplete="off" placeholder="договорная" value=${price} onChange=${e => setPrice(e.target.value)} />
       ${remember ? html`<span class="sub" style=${{ marginTop: 0, fontSize: '13px' }}>Цена запомнится в прайсе</span>` : null}</div>
     <div class="field"><span class="lbl">Количество</span><${QtyInput} value=${qty} onChange=${setQty} unit=${work.unit} /></div>
@@ -330,7 +317,7 @@ function EditWorkSheet({ work, initialName, onClose, onSave, onDelete }) {
     <div class="field"><label class="lbl" htmlFor="wk-name">Название</label>
       <input id="wk-name" enterKeyHint="done" value=${name} onChange=${e => setName(e.target.value)} placeholder="Например: Замена смесителя" /></div>
     <div class="two">
-      <div class="field"><label class="lbl" htmlFor="wk-price">Цена, ₽</label>
+      <div class="field"><label class="lbl" htmlFor="wk-price">Цена, ${CURRENCY}</label>
         <input id="wk-price" inputMode="decimal" enterKeyHint="done" autoComplete="off" placeholder="договорная" value=${price} onChange=${e => setPrice(e.target.value)} /></div>
       <div class="field"><label class="lbl" htmlFor="wk-unit">За</label>
         <select id="wk-unit" value=${unit} onChange=${e => setUnit(e.target.value)}>${WORK_UNITS.map(u => html`<option key=${u} value=${u}>${u}</option>`)}</select></div>

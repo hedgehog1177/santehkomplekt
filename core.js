@@ -303,18 +303,20 @@ const DEFAULT_WORKS = [
   w(17, 'Разводка водоснабжения', 'точка'), w(18, 'Разводка канализации', 'точка'), w(19, 'Монтаж трубы', 'м'),
   w(20, 'Прочистка канализации', 'шт'), w(21, 'Почасовая работа', 'час'),
 ];
-// Цена: пусто, 0 или мусор — null («договорная»); пробелы, «₽», «руб» допускаются; до копеек
+// Знак валюты — в одном месте: его же показывают подписи полей цены
+const CURRENCY = '$';
+// Цена: пусто, 0 или мусор — null («договорная»); пробелы и знаки валюты допускаются; до центов
 function parsePrice(s) {
-  const t = String(s == null ? '' : s).replace(/\s|₽|руб\.?/gi, '').replace(',', '.').replace(/[^\d.]/g, '');
+  const t = String(s == null ? '' : s).replace(/\s|\$|₽|руб\.?/gi, '').replace(',', '.').replace(/[^\d.]/g, '');
   const n = parseFloat(t);
   if (!isFinite(n) || n <= 0) return null;
   return Math.min(Math.round(n * 100) / 100, MAX_PRICE);
 }
-// «1 500 ₽», «1 500,50 ₽» (неразрывные пробелы), null — «договорная»
+// «1 500 $», «1 500,50 $» (неразрывные пробелы), null — «договорная»
 function fmtMoney(n) {
   if (n == null) return 'договорная';
   const [i, f] = String(Math.round(n * 100) / 100).split('.');
-  return i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (f ? ',' + f.padEnd(2, '0') : '') + ' ₽';
+  return i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (f ? ',' + f.padEnd(2, '0') : '') + ' ' + CURRENCY;
 }
 // Цена в поле ввода: 1500 → «1500», 1500.5 → «1500,5»; null → пусто
 const priceInput = n => (n == null ? '' : String(n).replace('.', ','));
@@ -327,7 +329,7 @@ function worksTotal(works) {
   (works || []).forEach(i => { const s = lineSum(i); if (s == null) unpriced++; else sum += s; });
   return { sum: Math.round(sum * 100) / 100, unpriced, count: (works || []).length };
 }
-// «2 шт × 1 500 ₽ = 3 000 ₽» или «1 шт, цена договорная»
+// «2 шт × 1 500 $ = 3 000 $» или «1 шт, цена договорная»
 const workLine = i => fmtQty(i.qty) + ' ' + i.unit + (i.price == null ? ', цена договорная' : ' × ' + fmtMoney(i.price) + ' = ' + fmtMoney(lineSum(i)));
 // Поиск по своему прайсу: все слова запроса, без разницы е/ё и регистра
 const fold = s => String(s).toLowerCase().replace(/ё/g, 'е');
@@ -362,7 +364,7 @@ function buildClientText(job, date) {
   else lines.push('Итого за работы: ' + fmtMoney(t.sum) + (t.unpriced ? ' (без договорных: ' + t.unpriced + ')' : ''));
   return lines.join('\n');
 }
-// Свой прайс текстом: «• Замена смесителя — 1 500 ₽ / шт»
+// Свой прайс текстом: «• Замена смесителя — 1 500 $ / шт»
 function buildPriceListText(list) {
   return ['Прайс на работы', ''].concat(list.map(x => '• ' + x.name + ' — ' + (x.price == null ? 'договорная' : fmtMoney(x.price) + ' / ' + x.unit))).join('\n');
 }
@@ -386,7 +388,7 @@ return {
   keyOf, fmtQty, parseQty, plural, fullName, findItem, groupOf, sortedGroups,
   initialSize, formFor, switchSize, qtyForm, rowState,
   applyItem, restoreItem, stepQty, bumpJob,
-  WORK_UNITS, DEFAULT_WORKS, MAX_PRICE, parsePrice, fmtMoney, priceInput, workEntry, lineSum, worksTotal, workLine,
+  WORK_UNITS, DEFAULT_WORKS, MAX_PRICE, CURRENCY, parsePrice, fmtMoney, priceInput, workEntry, lineSum, worksTotal, workLine,
   filterWorks, mergeWorkLists, buildClientText, buildPriceListText,
   normalizeItems, normalizeJob, backupJobs, mergeJobs, buildText,
 };
