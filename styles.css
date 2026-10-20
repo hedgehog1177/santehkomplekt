@@ -130,6 +130,8 @@ a.btn { text-decoration: none; color: var(--fg); }
 .sheet .sub { color: var(--muted); font-size: 14px; margin-top: -8px; }
 .lbl { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .field { display: grid; gap: 6px; }
+/* Смысловой блок в окне: линия на всю ширину окна и воздух над ней */
+.sheet .section { border-top: 1px solid var(--line); margin: 6px -16px 0; padding: 18px 16px 0; }
 .field input, .field select, .field textarea { width: 100%; border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 11px 12px; font-size: 16px; }
 .sizes { display: flex; flex-wrap: wrap; gap: 6px; }
 .size { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 9px 13px; min-height: 42px; font-family: var(--font-mark); font-size: 15px; font-weight: 600; position: relative; }

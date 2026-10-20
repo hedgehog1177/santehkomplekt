@@ -217,7 +217,7 @@ function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onCl
       <button type="button" className="btn" disabled=${!cur || readOnly} onClick=${startEdit}>Изменить текущий</button>
       <button type="button" className="btn primary" disabled=${readOnly} onClick=${() => { setName(''); setAddr(''); setMode('new'); }}>+ Новый объект</button>
     </div>
-    <div class="field">
+    <div class="field section">
       <span class="lbl">Пин-код при входе</span>
       ${pinOn ? html`<div class="two">
           <button type="button" className="btn" onClick=${() => onPin('change')}>Изменить</button>
@@ -227,8 +227,8 @@ function JobsSheet({ jobs, currentId, onPick, onCreate, onRename, onDelete, onCl
         ? 'Включен. Спрашивается при запуске и если приложение было свернуто дольше 10 минут.'
         : 'Чтобы дети не открыли списки. Спрашивается при запуске и если приложение было свернуто дольше 10 минут.'}</span>
     </div>
-    <a className="btn block" href="help.html">Как пользоваться приложением</a>
-    <div class="field">
+    <div class="section"><a className="btn block" href="help.html">Как пользоваться приложением</a></div>
+    <div class="field section">
       <span class="lbl">Резервная копия</span>
       <div class="two">
         <button type="button" className="btn" disabled=${!jobs.length} onClick=${onBackup}>Сохранить в файл</button>
