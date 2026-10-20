@@ -308,8 +308,7 @@ function PinScreen({ record, onUnlock }) {
     <${PinPad} value=${entry} onChange=${setEntry} disabled=${wait > 0} />
     <button type="button" className="pin-forgot" aria-expanded=${help} onClick=${() => setHelp(h => !h)}>Забыли пин-код?</button>
     ${help ? html`<div class="pin-help">
-      <p>Пин-код нельзя восстановить. Снять его можно только вместе с данными приложения:</p>
-      <p>Chrome → ⋮ → Настройки → Настройки сайтов → Все сайты → <b>${location.host}</b> → Удалить.</p>
+      <p>Пин-код нельзя восстановить. Снять его можно только вместе с данными приложения.</p>
       <p>Удалятся все объекты и прайс работ. Потом верните их из резервной копии: «Объект ▾» → «Загрузить из файла».</p>
     </div>` : null}
   </div>`;
