@@ -249,11 +249,12 @@ function SettingsSheet({ jobs, onClose, onBackup, onRestore, pinOn, onPin }) {
 
 /* ---------- Текст для мессенджера ---------- */
 const buildText = job => SantehCore.buildText(job, today());
-function TextSheet({ text, onClose }) {
+// Окно с выделенным текстом, когда буфера обмена нет; заголовок — по содержимому
+function TextSheet({ text, title = 'Текст списка', onClose }) {
   const ref = useRef(null);
   useEffect(() => { if (ref.current) { ref.current.focus(); ref.current.select(); } }, []);
-  return html`<${Sheet} onClose=${onClose} label="Текст списка">
-    <h3>Текст списка</h3>
+  return html`<${Sheet} onClose=${onClose} label=${title}>
+    <h3>${title}</h3>
     <div class="sub">Буфер обмена недоступен. Текст выделен — скопируйте его вручную.</div>
     <textarea ref=${ref} className="textout" readOnly value=${text}></textarea>
   <//>`;
@@ -663,13 +664,13 @@ function App() {
     setSheet(null); say('Удалено из прайса');
   }
   // Отправить текст: «Поделиться» телефона, если есть, иначе в буфер, иначе окно с выделенным текстом
-  async function sendText(title, text, copiedMsg) {
+  async function sendText(title, text, copiedMsg, sheetTitle) {
     if (canShareText) { const r = await Platform.shareText(title, text); if (r !== 'unsupported') return; }
     if (await Platform.copyText(text)) say(copiedMsg);
-    else setSheet({ type: 'text', text });
+    else setSheet({ type: 'text', text, title: sheetTitle });
   }
-  const clientText = () => sendText('Работы — ' + job.name, buildClientText(job, today()), 'Текст для клиента скопирован — вставьте в мессенджер');
-  const sharePriceList = () => sendText('Прайс на работы', buildPriceListText(workList), 'Прайс скопирован — вставьте в мессенджер');
+  const clientText = () => sendText('Работы — ' + job.name, buildClientText(job, today()), 'Текст для клиента скопирован — вставьте в мессенджер', 'Текст для клиента');
+  const sharePriceList = () => sendText('Прайс на работы', buildPriceListText(workList), 'Прайс скопирован — вставьте в мессенджер', 'Прайс на работы');
   function createJob(name, address) {
     const nj = { id: uid(), name, address, items: [], works: [], createdAt: Date.now(), updatedAt: Date.now() };
     setJobs(list => [nj].concat(list));
@@ -822,7 +823,7 @@ function App() {
       onClose=${() => setSheet(null)} onDone=${rec => pinDone(sheet.mode, rec)} />` : null}
     ${sheet && sheet.type === 'settings' ? html`<${SettingsSheet} jobs=${jobs} onClose=${() => setSheet(null)}
       onBackup=${backup} onRestore=${restore} pinOn=${!!pinRec} onPin=${mode => setSheet({ type: 'pin', mode })} />` : null}
-    ${sheet && sheet.type === 'text' ? html`<${TextSheet} text=${sheet.text} onClose=${() => setSheet(null)} />` : null}
+    ${sheet && sheet.type === 'text' ? html`<${TextSheet} text=${sheet.text} title=${sheet.title} onClose=${() => setSheet(null)} />` : null}
     ${sheet && sheet.type === 'work' && job ? html`<${WorkSheet} key=${'w' + sheet.work.id} work=${sheet.work} job=${job}
       onClose=${() => setSheet(null)}
       onEdit=${sheet.work.orphan ? null : () => setSheet({ type: 'editWork', work: workList.find(x => x.id === sheet.work.id) })}
