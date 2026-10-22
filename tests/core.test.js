@@ -290,6 +290,25 @@ test('резервная копия: слияние без дублей (BAK-04,
   assert.equal(r.jobs[0].items[0].size, '20×½" ВР');
 });
 
+test('резервная копия: свежий пример не затирает «Пример» из копии', () => {
+  // Новый телефон или удалили данные: пример создан только что, а копия сделана раньше
+  const fresh = C.exampleJob(1000);
+  assert.deepEqual([fresh.id, fresh.createdAt, fresh.updatedAt, fresh.items.length], ['example-1', 1000, 0, 11]);
+  assert.equal(new Set(fresh.items.map(i => i.at)).size, 11, 'у позиций разное время добавления');
+  const mine = Object.assign({}, fresh, { name: 'Кв. 45 — мой объект', items: fresh.items.slice(0, 3), updatedAt: 500 });
+  let r = C.mergeJobs([fresh], [mine]);
+  assert.deepEqual([r.added, r.updated, r.jobs.length], [0, 1, 1]);
+  assert.equal(r.jobs[0].name, 'Кв. 45 — мой объект');
+  assert.equal(r.jobs[0].items.length, 3, 'позиции из копии на месте');
+  // В копии нетронутый пример — ничего не меняется и не задваивается
+  r = C.mergeJobs([fresh], [C.exampleJob(200)]);
+  assert.deepEqual([r.added, r.updated, r.jobs.length], [0, 0, 1]);
+  // Пример уже правили на этом телефоне — правка свежее старой копии и остается
+  const edited = C.bumpJob([fresh], 'example-1', j => Object.assign({}, j, { name: 'Правка на телефоне' }), 2000);
+  r = C.mergeJobs(edited, [mine]);
+  assert.equal(r.jobs[0].name, 'Правка на телефоне');
+});
+
 test('текст для мессенджера (EXP-01, EXP-02)', () => {
   const job = { name: 'Кв. 12', address: 'ул. Садовая, 1', items: [
     item('ppr', 'Ø25', 6, { at: 2 }),

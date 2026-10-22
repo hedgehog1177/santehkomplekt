@@ -326,16 +326,7 @@ function loadJobs() {
   } catch (e) { /* повреждённые данные — начнём с примера */ }
   return null;
 }
-function exampleJob() {
-  const t = Date.now();
-  let k = 0; // у каждой позиции своё время добавления — порядок в группе однозначный
-  const add = (pid, size, qty, note) => { const pt = PART_BY_ID[pid]; return { key: keyOf(pid, size), pid, name: pt.name, size, unit: pt.unit, group: pt.group, qty, note: note || '', at: t + k++ }; };
-  return { id: 'example-1', name: 'Пример: кв. 45, санузел', address: 'Пример — удалите или переименуйте', createdAt: t, updatedAt: t, items: [
-    add('ppr', 'Ø20', 12), add('ppr-90', 'Ø20', 10), add('ppr-tee', 'Ø20', 4), add('ppr-wall', '20×½" ВР', 4),
-    add('v-ff', '½"', 2, 'на вводе ХВС и ГВС'), add('m-cnt', 'ХВС', 1), add('m-cnt', 'ГВС', 1),
-    add('s-pipe', 'Ø50×1000', 3), add('s-87', 'Ø50', 4), add('h-flex', '40 см', 2), add('c-fum', '19 мм × 15 м', 2),
-  ] };
-}
+const exampleJob = () => SantehCore.exampleJob(Date.now());
 const safeName = s => s.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 120);
 
 /* ---------- Приложение ---------- */

@@ -264,6 +264,18 @@ function normalizeItems(items) {
   return out;
 }
 const normalizeJob = j => Object.assign({ items: [] }, j, { items: normalizeItems(j.items) });
+// Пример для первого запуска. updatedAt: 0 — нетронутый пример «старше» любой копии: на новом телефоне
+// или после удаления данных «Пример» из резервной копии (возможно, уже переименованный) заменяет свежий
+// пример, а не отбрасывается. Первая правка ставит настоящее время, как у любого объекта
+function exampleJob(t) {
+  let k = 0; // у каждой позиции своё время добавления — порядок в группе однозначный
+  const add = (pid, size, qty, note) => { const pt = PART_BY_ID[pid]; return { key: keyOf(pid, size), pid, name: pt.name, size, unit: pt.unit, group: pt.group, qty, note: note || '', at: t + k++ }; };
+  return { id: 'example-1', name: 'Пример: кв. 45, санузел', address: 'Пример — удалите или переименуйте', createdAt: t, updatedAt: 0, items: [
+    add('ppr', 'Ø20', 12), add('ppr-90', 'Ø20', 10), add('ppr-tee', 'Ø20', 4), add('ppr-wall', '20×½" ВР', 4),
+    add('v-ff', '½"', 2, 'на вводе ХВС и ГВС'), add('m-cnt', 'ХВС', 1), add('m-cnt', 'ГВС', 1),
+    add('s-pipe', 'Ø50×1000', 3), add('s-87', 'Ø50', 4), add('h-flex', '40 см', 2), add('c-fum', '19 мм × 15 м', 2),
+  ] };
+}
 // Объекты из файла копии или null, если это не копия Сантехкомплекта
 function backupJobs(data) {
   const incoming = Array.isArray(data) ? data : data && data.jobs;
@@ -300,7 +312,7 @@ return {
   CATALOG, OWN, GROUP_ORDER, GROUP_NAME, PARTS, PART_BY_ID, UNITS, INT_UNITS, PRESETS, MAX_QTY, SIZE_RENAMES,
   keyOf, fmtQty, parseQty, plural, fullName, findItem, groupOf, sortedGroups,
   initialSize, formFor, switchSize, qtyForm, rowState,
-  applyItem, restoreItem, stepQty, bumpJob,
+  applyItem, restoreItem, stepQty, bumpJob, exampleJob,
   normalizeItems, normalizeJob, backupJobs, mergeJobs, buildText,
 };
 });
