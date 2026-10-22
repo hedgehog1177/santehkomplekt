@@ -146,8 +146,8 @@ const PARTS = [];
 CATALOG.forEach(g => g.items.forEach(it => { it.group = g.id; PARTS.push(it); }));
 const PART_BY_ID = Object.fromEntries(PARTS.map(x => [x.id, x]));
 const UNITS = ['шт', 'м', 'компл', 'уп', 'кг', 'л'];
-const INT_UNITS = { 'шт': 1, 'компл': 1, 'уп': 1 };
-const PRESETS = { 'м': [1, 2, 4, 6, 10, 25, 50], 'шт': [1, 2, 4, 6, 10, 20] };
+const INT_UNITS = { 'шт': 1, 'компл': 1, 'уп': 1, 'точка': 1 };
+const PRESETS = { 'м': [1, 2, 4, 6, 10, 25, 50], 'шт': [1, 2, 4, 6, 10, 20], 'час': [1, 2, 3, 4, 6, 8] };
 
 /* ---------- Количество и позиции ---------- */
 const MAX_QTY = 99999;
@@ -160,6 +160,18 @@ function parseQty(s, unit) {
   return Math.min(n, MAX_QTY);
 }
 const plural = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c); };
+// Единицы полным словом склоняются по числу: «2 часа», «5 точек», с дробью — «1,5 часа».
+// Сокращения (шт, м, компл…) не меняются
+const UNIT_FORMS = { 'час': ['час', 'часа', 'часов'], 'точка': ['точка', 'точки', 'точек'] };
+function unitFor(n, unit) {
+  const f = UNIT_FORMS[unit];
+  if (!f) return unit;
+  const r = Math.round(n * 100) / 100;
+  return Number.isInteger(r) ? plural(r, f[0], f[1], f[2]) : f[1];
+}
+const qtyUnit = (n, unit) => fmtQty(n) + ' ' + unitFor(n, unit);
+// «Цена за точку», «За точку»
+const unitPer = unit => (unit === 'точка' ? 'точку' : unit);
 const fullName = it => it.name + (it.size ? ' ' + it.size : '');
 const findItem = (items, pid, size) => items.find(i => i.key === keyOf(pid, size));
 const groupOf = i => i.group || (PART_BY_ID[i.pid] && PART_BY_ID[i.pid].group) || OWN.id;
@@ -196,7 +208,7 @@ function qtyForm(part, items, size, qtyText, readOnly) {
   return {
     existing, n,
     canSave: !readOnly && n > 0,
-    label: (existing ? 'Сохранить' : 'Добавить в список') + ' · ' + fmtQty(n) + ' ' + part.unit,
+    label: (existing ? 'Сохранить' : 'Добавить в список') + ' · ' + qtyUnit(n, part.unit),
   };
 }
 
@@ -207,7 +219,7 @@ function rowState(part, items) {
   const single = got.length === 1 && part.sizes.length === 1 ? got[0] : null;
   return {
     onSizes: new Set(got.map(g => g.size)),
-    badge: !got.length ? null : single ? fmtQty(single.qty) + ' ' + part.unit : got.length + ' поз.',
+    badge: !got.length ? null : single ? qtyUnit(single.qty, part.unit) : got.length + ' поз.',
   };
 }
 
@@ -263,14 +275,17 @@ function normalizeItems(items) {
   });
   return out;
 }
-const normalizeJob = j => Object.assign({ items: [] }, j, { items: normalizeItems(j.items) });
+const normalizeJob = j => Object.assign({ items: [], works: [] }, j, {
+  items: normalizeItems(j.items),
+  works: Array.isArray(j.works) ? j.works : [],
+});
 // Пример для первого запуска. updatedAt: 0 — нетронутый пример «старше» любой копии: на новом телефоне
-// или после удаления данных «Пример» из резервной копии (возможно, уже переименованный) заменяет свежий
-// пример, а не отбрасывается. Первая правка ставит настоящее время, как у любого объекта
+// или после удаления данных «Пример» из резервной копии (возможно, уже переименованный и с работами)
+// заменяет свежий пример, а не отбрасывается. Первая правка ставит настоящее время, как у любого объекта
 function exampleJob(t) {
   let k = 0; // у каждой позиции своё время добавления — порядок в группе однозначный
   const add = (pid, size, qty, note) => { const pt = PART_BY_ID[pid]; return { key: keyOf(pid, size), pid, name: pt.name, size, unit: pt.unit, group: pt.group, qty, note: note || '', at: t + k++ }; };
-  return { id: 'example-1', name: 'Пример: кв. 45, санузел', address: 'Пример — удалите или переименуйте', createdAt: t, updatedAt: 0, items: [
+  return { id: 'example-1', name: 'Пример: кв. 45, санузел', address: 'Пример — удалите или переименуйте', createdAt: t, updatedAt: 0, works: [], items: [
     add('ppr', 'Ø20', 12), add('ppr-90', 'Ø20', 10), add('ppr-tee', 'Ø20', 4), add('ppr-wall', '20×½" ВР', 4),
     add('v-ff', '½"', 2, 'на вводе ХВС и ГВС'), add('m-cnt', 'ХВС', 1), add('m-cnt', 'ГВС', 1),
     add('s-pipe', 'Ø50×1000', 3), add('s-87', 'Ø50', 4), add('h-flex', '40 см', 2), add('c-fum', '19 мм × 15 м', 2),
@@ -294,6 +309,131 @@ function mergeJobs(current, incoming) {
   return { jobs: Array.from(map.values()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)), added, updated };
 }
 
+/* ---------- Работы: свой прайс мастера и работы в объекте ---------- */
+// В объекте работы лежат отдельно от деталей (job.works), поэтому заявка в магазин, Excel и метки
+// каталога их не видят. Строка работы устроена как позиция списка (pid «w:…», без размера),
+// так что для неё работают те же applyItem, restoreItem и stepQty
+const WORK_UNITS = ['шт', 'точка', 'м', 'компл', 'час'];
+const MAX_PRICE = 9999999;
+const w = (n, name, unit) => ({ id: 'w-' + String(n).padStart(2, '0'), name, unit, price: null, updatedAt: 0 });
+// Стартовый прайс: типовые работы без цен — мастер проставит свои и удалит лишнее
+const DEFAULT_WORKS = [
+  w(2, 'Установка смесителя', 'шт'), w(3, 'Замена смесителя', 'шт'),
+  w(4, 'Замена сифона', 'шт'), w(5, 'Установка раковины', 'шт'), w(6, 'Установка унитаза', 'шт'),
+  w(7, 'Установка инсталляции с унитазом', 'компл'), w(8, 'Установка ванны', 'шт'), w(9, 'Установка душевой кабины', 'шт'),
+  w(10, 'Подключение стиральной машины', 'шт'), w(11, 'Подключение посудомоечной машины', 'шт'),
+  w(12, 'Установка водонагревателя', 'шт'), w(13, 'Установка счётчика воды', 'шт'), w(14, 'Замена шарового крана', 'шт'),
+  w(15, 'Монтаж радиатора отопления', 'шт'), w(16, 'Монтаж полотенцесушителя', 'шт'),
+  w(17, 'Разводка водоснабжения', 'точка'), w(18, 'Разводка канализации', 'точка'), w(19, 'Монтаж трубы', 'м'),
+  w(20, 'Прочистка канализации', 'шт'), w(21, 'Почасовая работа', 'час'),
+];
+// Знак валюты — в одном месте: его же показывают подписи полей цены
+const CURRENCY = '$';
+// Цена: пусто, 0 или мусор — null («договорная»); пробелы и знаки валюты допускаются; до центов
+function parsePrice(s) {
+  const t = String(s == null ? '' : s).replace(/\s|\$|₽|руб\.?/gi, '').replace(',', '.').replace(/[^\d.]/g, '');
+  const n = parseFloat(t);
+  if (!isFinite(n) || n <= 0) return null;
+  return Math.min(Math.round(n * 100) / 100, MAX_PRICE);
+}
+// «$1 500», «$1 500,50» — знак перед числом, тысячи через неразрывный пробел; null — «договорная»
+function fmtMoney(n) {
+  if (n == null) return 'договорная';
+  const [i, f] = String(Math.round(n * 100) / 100).split('.');
+  return CURRENCY + i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (f ? ',' + f.padEnd(2, '0') : '');
+}
+// Цена в поле ввода: 1500 → «1500», 1500.5 → «1500,5»; null → пусто
+const priceInput = n => (n == null ? '' : String(n).replace('.', ','));
+// Строка работы для объекта из записи прайса
+const workEntry = (work, price) => ({ pid: 'w:' + work.id, wid: work.id, name: work.name, size: '', unit: work.unit, price });
+const lineSum = i => (i.price == null ? null : Math.round(i.qty * i.price * 100) / 100);
+// Итог по работам объекта: сумма тех, где цена есть, и сколько договорных
+function worksTotal(works) {
+  let sum = 0, unpriced = 0;
+  (works || []).forEach(i => { const s = lineSum(i); if (s == null) unpriced++; else sum += s; });
+  return { sum: Math.round(sum * 100) / 100, unpriced, count: (works || []).length };
+}
+// «2 шт × $1 500 = $3 000» или «1 шт, цена договорная»
+const workLine = i => qtyUnit(i.qty, i.unit) + (i.price == null ? ', цена договорная' : ' × ' + fmtMoney(i.price) + ' = ' + fmtMoney(lineSum(i)));
+// Поиск по своему прайсу: все слова запроса, без разницы е/ё и регистра
+const fold = s => String(s).toLowerCase().replace(/ё/g, 'е');
+function filterWorks(list, q) {
+  const words = fold(q).split(/\s+/).filter(Boolean);
+  return words.length ? list.filter(x => words.every(wd => fold(x.name).includes(wd))) : list;
+}
+// Запись прайса из копии: только с id, названием и известной единицей
+const isWork = x => x && x.id && typeof x.name === 'string' && x.name.trim() && WORK_UNITS.includes(x.unit);
+// Слияние прайса из резервной копии: новые работы добавляются, совпавшие по id — более свежая версия
+function mergeWorkLists(current, incoming) {
+  const map = new Map(current.map(x => [x.id, x]));
+  let added = 0, updated = 0;
+  (Array.isArray(incoming) ? incoming : []).filter(isWork).forEach(x => {
+    const cur = map.get(x.id);
+    const item = Object.assign({}, x, { price: x.price == null ? null : parsePrice(x.price) });
+    if (!cur) { added++; map.set(x.id, item); }
+    else if ((x.updatedAt || 0) > (cur.updatedAt || 0)) { updated++; map.set(x.id, item); }
+  });
+  return { list: Array.from(map.values()), added, updated };
+}
+// Текст для клиента: работы с ценами и итог (детали — в заявке магазину, сюда не попадают)
+function buildClientText(job, date) {
+  const works = job.works || [];
+  const t = worksTotal(works);
+  const lines = ['Объект: ' + job.name];
+  if (job.address) lines.push('Адрес: ' + job.address);
+  lines.push('Дата: ' + date, '', 'РАБОТЫ');
+  works.slice().sort((a, b) => (a.at || 0) - (b.at || 0)).forEach(i => lines.push('• ' + i.name + ' — ' + workLine(i) + (i.note ? ' (' + i.note + ')' : '')));
+  lines.push('');
+  if (t.unpriced === t.count) lines.push('Стоимость работ — договорная');
+  else lines.push('Итого за работы: ' + fmtMoney(t.sum) + (t.unpriced ? ' + ' + t.unpriced + ' ' + plural(t.unpriced, 'работа', 'работы', 'работ') + ' по договорной цене' : ''));
+  return lines.join('\n');
+}
+// Свой прайс текстом: «• Замена смесителя — $1 500 / шт»
+function buildPriceListText(list) {
+  return ['Прайс на работы', ''].concat(list.map(x => '• ' + x.name + ' — ' + (x.price == null ? 'договорная' : fmtMoney(x.price) + ' / ' + x.unit))).join('\n');
+}
+
+/* ---------- Пин-код при входе ---------- */
+// «Замок от детей»: не даёт случайно открыть списки. Не защита от взрослого с компьютером —
+// данные всё равно лежат в браузере. Сам пин не хранится: только отпечаток PBKDF2 со случайной солью
+const PIN_LEN = 4;
+const PIN_LOCK_AFTER = 10 * 60 * 1000; // свернули дольше — при возврате снова пин
+const PIN_MAX_TRIES = 5;               // столько неверных подряд — и пауза
+const PIN_PAUSE = 30 * 1000;
+const PIN_ITER = 100000;
+const isPin = s => new RegExp('^\\d{' + PIN_LEN + '}$').test(String(s));
+// Запереть ли при запуске: пин есть, а в этом сеансе ещё не открывали — или открыли, но свернули надолго
+function pinLockedOnStart({ hasPin, unlocked, hiddenAt, now }) {
+  if (!hasPin) return false;
+  if (!unlocked) return true;
+  return hiddenAt != null && now - hiddenAt >= PIN_LOCK_AFTER;
+}
+const pinLockedOnReturn = (hiddenAt, now) => hiddenAt != null && now - hiddenAt >= PIN_LOCK_AFTER;
+// Неверный пин: считаем попытки; на пятой — пауза, счётчик с нуля
+function pinFail(tries, now) {
+  const fails = ((tries && tries.fails) || 0) + 1;
+  return fails >= PIN_MAX_TRIES ? { fails: 0, until: now + PIN_PAUSE } : { fails, until: (tries && tries.until) || 0 };
+}
+// Сколько секунд ещё ждать (0 — можно вводить)
+const pinWait = (tries, now) => Math.max(0, Math.ceil((((tries && tries.until) || 0) - now) / 1000));
+const toHex = buf => Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('');
+const newSalt = () => toHex(globalThis.crypto.getRandomValues(new Uint8Array(16)));
+async function hashPin(pin, salt) {
+  const enc = new TextEncoder();
+  const key = await globalThis.crypto.subtle.importKey('raw', enc.encode(String(pin)), 'PBKDF2', false, ['deriveBits']);
+  const bits = await globalThis.crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode(salt), iterations: PIN_ITER }, key, 256);
+  return toHex(bits);
+}
+// Запись для хранения: { v, salt, hash } — без самого пина
+async function makePinRecord(pin, salt) {
+  const s = salt || newSalt();
+  return { v: 1, salt: s, hash: await hashPin(pin, s) };
+}
+async function checkPin(pin, record) {
+  if (!record || !isPin(pin)) return false;
+  return (await hashPin(pin, record.salt)) === record.hash;
+}
+
 /* ---------- Текст для мессенджера ---------- */
 function buildText(job, date) {
   const lines = ['Объект: ' + job.name];
@@ -301,7 +441,7 @@ function buildText(job, date) {
   lines.push('Дата: ' + date, '');
   sortedGroups(job.items).forEach(g => {
     lines.push(g.name.toUpperCase());
-    g.items.forEach(i => lines.push('• ' + fullName(i) + ' — ' + fmtQty(i.qty) + ' ' + i.unit + (i.note ? ' (' + i.note + ')' : '')));
+    g.items.forEach(i => lines.push('• ' + fullName(i) + ' — ' + qtyUnit(i.qty, i.unit) + (i.note ? ' (' + i.note + ')' : '')));
     lines.push('');
   });
   lines.push('Всего позиций: ' + job.items.length);
@@ -310,9 +450,13 @@ function buildText(job, date) {
 
 return {
   CATALOG, OWN, GROUP_ORDER, GROUP_NAME, PARTS, PART_BY_ID, UNITS, INT_UNITS, PRESETS, MAX_QTY, SIZE_RENAMES,
-  keyOf, fmtQty, parseQty, plural, fullName, findItem, groupOf, sortedGroups,
+  keyOf, fmtQty, parseQty, plural, unitFor, qtyUnit, unitPer, fullName, findItem, groupOf, sortedGroups,
   initialSize, formFor, switchSize, qtyForm, rowState,
   applyItem, restoreItem, stepQty, bumpJob, exampleJob,
+  WORK_UNITS, DEFAULT_WORKS, MAX_PRICE, CURRENCY, parsePrice, fmtMoney, priceInput, workEntry, lineSum, worksTotal, workLine,
+  filterWorks, mergeWorkLists, buildClientText, buildPriceListText,
+  PIN_LEN, PIN_LOCK_AFTER, PIN_MAX_TRIES, PIN_PAUSE, isPin, pinLockedOnStart, pinLockedOnReturn, pinFail, pinWait,
+  hashPin, makePinRecord, checkPin,
   normalizeItems, normalizeJob, backupJobs, mergeJobs, buildText,
 };
 });

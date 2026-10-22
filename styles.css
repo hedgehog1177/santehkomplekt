@@ -91,7 +91,7 @@ button { cursor: pointer; }
 .summary h1 { margin: 0; font-size: 20px; text-wrap: balance; }
 .summary .count { color: var(--muted); font-size: 14px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 14px; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 14px; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; text-align: center; gap: 6px; }
 .btn.primary { background: var(--water); color: var(--water-fg); border-color: var(--water); }
 .btn.danger { color: var(--danger); }
 .btn.danger.armed { background: var(--danger-soft); border-color: var(--danger); }
@@ -115,7 +115,7 @@ a.btn { text-decoration: none; color: var(--fg); }
 
 /* Tab bar */
 .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
-.tabbar .in { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; }
+.tabbar .in { max-width: 760px; margin: 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
 .tab { border: 0; background: none; padding: 10px 8px 12px; display: grid; justify-items: center; gap: 2px; color: var(--muted); font-size: 13px; font-weight: 600; position: relative; }
 .tab[aria-current="page"] { color: var(--water); }
 .tab[aria-current="page"]::before { content: ""; position: absolute; top: 0; left: 30%; right: 30%; height: 3px; border-radius: 0 0 3px 3px; background: var(--water); }
@@ -130,6 +130,10 @@ a.btn { text-decoration: none; color: var(--fg); }
 .sheet .sub { color: var(--muted); font-size: 14px; margin-top: -8px; }
 .lbl { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .field { display: grid; gap: 6px; }
+/* Карточки: окно с фоном экрана, каждый блок — своя карточка */
+.sheet:has(> .card) { background: var(--bg); gap: 12px; }
+.sheet .card { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 14px; }
+.sheet .card .btn:not(.primary) { background: var(--surface-2); }
 .field input, .field select, .field textarea { width: 100%; border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 11px 12px; font-size: 16px; }
 .sizes { display: flex; flex-wrap: wrap; gap: 6px; }
 .size { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 9px 13px; min-height: 42px; font-family: var(--font-mark); font-size: 15px; font-weight: 600; position: relative; }
@@ -160,6 +164,27 @@ a.btn { text-decoration: none; color: var(--fg); }
 .toast-act { flex: none; min-height: 40px; padding: 0 14px; border: 1px solid currentColor; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
 .toast-timer { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: currentColor; opacity: .45; transform-origin: left; animation: undo-timer linear forwards; }
 @keyframes undo-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+/* Пин-код */
+.pin-screen { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: calc(24px + env(safe-area-inset-top, 0px)) 16px calc(24px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
+.pin-logo { width: 64px; height: 64px; border-radius: 16px; }
+.pin-screen h1 { margin: 0; font-size: 20px; }
+.pin-msg { margin: 0; color: var(--muted); text-align: center; min-height: 1.45em; }
+.pin { display: grid; justify-items: center; gap: 20px; }
+.sheet .pin { margin: 4px auto 6px; }
+.pin-dots { display: flex; gap: 16px; }
+.pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); }
+.pin-dot.on { background: var(--water); border-color: var(--water); }
+.pin-keys { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; }
+.pin-keys button { width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font-family: var(--font-mark); font-size: 26px; font-weight: 600; }
+.pin-keys button:active { background: var(--surface-2); }
+.pin-keys button:disabled { opacity: .45; }
+.pin-forgot { border: 0; background: none; color: var(--water); font-weight: 600; padding: 10px; }
+.pin-help { max-width: 340px; color: var(--muted); font-size: 14px; line-height: 1.45; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 4px 14px; }
+.pin-help p { margin: 10px 0; }
+.pin-help b { color: var(--fg); overflow-wrap: anywhere; }
+/* Работы */
+.works-hint { margin: 6px 0 12px; color: var(--muted); font-size: 14px; }
+.work-sum { margin: 0; font-family: var(--font-mark); font-weight: 600; font-size: 15px; color: var(--fg); }
 .loading { padding: 40px 0; color: var(--muted); text-align: center; }
 
 @keyframes rise { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
@@ -182,5 +207,4 @@ img { max-width: 100%; }
 .row .name, .lrow .name, .lrow .note, .sheet h3, .summary h1 { overflow-wrap: anywhere; hyphens: auto; }
 
 /* Строка версии в окне «Объекты» */
-.theme-pick .size { flex: 1 1 0; font-family: var(--font-ui); font-size: 14px; padding-inline: 8px; }
 .app-version { margin: 0; text-align: right; font-family: var(--font-mark); font-size: 10px; letter-spacing: .02em; color: var(--muted); }
