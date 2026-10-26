@@ -191,6 +191,56 @@ a.btn { text-decoration: none; color: var(--fg); }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .scrim, .sheet, .toast, .toast-timer { animation: none; } }
 
+/* Смена вкладки (View Transitions): шапка и нижняя панель меняются сразу, анимируется только содержимое */
+:root { --tab-dur: 250ms; --dx: 1; }
+:root[data-tab-dir="back"] { --dx: -1; }
+.top { view-transition-name: top; }
+.tabbar { view-transition-name: tabbar; }
+.anim-demo, .anim-demo-btn { view-transition-name: anim-demo; }
+::view-transition-group(top), ::view-transition-group(tabbar), ::view-transition-group(anim-demo),
+::view-transition-new(top), ::view-transition-new(tabbar), ::view-transition-new(anim-demo) { animation: none; }
+::view-transition-old(top), ::view-transition-old(tabbar), ::view-transition-old(anim-demo) { display: none; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--tab-dur); animation-timing-function: ease; animation-fill-mode: both; }
+
+/* ВРЕМЕННО: пять вариантов для выбора, после выбора остается один */
+@keyframes vt-out { to { opacity: 0; } }
+@keyframes vt-in { from { opacity: 0; } }
+@keyframes vt-in-zoom { from { opacity: 0; transform: scale(.96); } }
+@keyframes vt-shift-out { to { opacity: 0; transform: translateX(calc(var(--dx) * -30px)); } }
+@keyframes vt-shift-in { from { opacity: 0; transform: translateX(calc(var(--dx) * 30px)); } }
+@keyframes vt-rise-in { from { opacity: 0; transform: translateY(16px); } }
+@keyframes vt-page-out { to { transform: translateX(calc(var(--dx) * -100%)); } }
+@keyframes vt-page-in { from { transform: translateX(calc(var(--dx) * 100%)); } }
+/* 1. Кроссфейд */
+:root[data-tab-anim="1"]::view-transition-old(root) { animation-name: vt-out; }
+:root[data-tab-anim="1"]::view-transition-new(root) { animation-name: vt-in; }
+/* 2. Через затухание: старое гаснет за первые 35%, новое проявляется после */
+:root[data-tab-anim="2"]::view-transition-old(root) { animation-name: vt-out; animation-duration: calc(var(--tab-dur) * .35); animation-timing-function: ease-in; }
+:root[data-tab-anim="2"]::view-transition-new(root) { animation-name: vt-in-zoom; animation-delay: calc(var(--tab-dur) * .35); animation-duration: calc(var(--tab-dur) * .65); animation-timing-function: ease-out; }
+/* 3. Сдвиг: со стороны нажатой вкладки */
+:root[data-tab-anim="3"]::view-transition-old(root) { animation-name: vt-shift-out; }
+:root[data-tab-anim="3"]::view-transition-new(root) { animation-name: vt-shift-in; animation-timing-function: ease-out; }
+/* 4. Подъем */
+:root[data-tab-anim="4"]::view-transition-old(root) { animation-name: vt-out; animation-duration: calc(var(--tab-dur) * .5); }
+:root[data-tab-anim="4"]::view-transition-new(root) { animation-name: vt-rise-in; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+/* 5. Перелистывание */
+:root[data-tab-anim="5"]::view-transition-old(root) { animation-name: vt-page-out; mix-blend-mode: normal; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+:root[data-tab-anim="5"]::view-transition-new(root) { animation-name: vt-page-in; mix-blend-mode: normal; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+/* Бегущая подсветка вкладки: полоска переезжает к нажатой вкладке */
+.tab .ind { display: none; }
+:root[data-tab-ind="on"] .tab[aria-current="page"]::before { content: none; }
+:root[data-tab-ind="on"] .tab .ind { display: block; position: absolute; top: 0; left: 30%; right: 30%; height: 3px; border-radius: 0 0 3px 3px; background: var(--water); view-transition-name: tab-ind; }
+::view-transition-group(tab-ind) { animation-duration: var(--tab-dur); animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+/* Панель стенда */
+.anim-demo-btn { position: fixed; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 40; border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 999px; padding: 8px 12px; font: inherit; font-size: 13px; font-weight: 600; box-shadow: 0 2px 8px rgba(0, 0, 0, .18); }
+.anim-demo { position: fixed; left: 12px; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 40; max-width: 420px; margin-inline: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: grid; gap: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, .28); }
+.anim-opt { text-align: left; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); border-radius: 10px; padding: 7px 10px; display: grid; gap: 1px; font: inherit; font-size: 14px; }
+.anim-opt span { font-size: 12px; color: var(--muted); }
+.anim-opt.on { border-color: var(--water); box-shadow: inset 0 0 0 1px var(--water); }
+.anim-durs { display: flex; gap: 6px; flex-wrap: wrap; }
+.anim-durs .chip.on { border-color: var(--water); color: var(--water); }
+.anim-ind { display: flex; gap: 8px; align-items: center; font-size: 14px; padding: 4px 2px; }
+
 /* Базовый сброс для отдельного приложения */
 :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 body { margin: 0; overscroll-behavior-y: contain; }

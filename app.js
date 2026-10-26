@@ -573,11 +573,54 @@ function loadWorks() {
   return DEFAULT_WORKS.map(x => Object.assign({}, x));
 }
 
+/* ---------- ВРЕМЕННО: стенд выбора анимации смены вкладки (только в локальной ветке) ---------- */
+const ANIMS = [
+  [1, 'Кроссфейд', 'старое гаснет, новое проявляется одновременно'],
+  [2, 'Через затухание', 'сначала гаснет старое, потом проявляется новое с легким увеличением'],
+  [3, 'Сдвиг', 'новое въезжает на 30 px со стороны нажатой вкладки'],
+  [4, 'Подъем', 'новое поднимается снизу на 16 px'],
+  [5, 'Перелистывание', 'экраны сдвигаются целиком, как страницы'],
+];
+const DURS = [150, 250, 400, 600];
+function AnimDemo() {
+  const [s, setS] = useState(() => Object.assign({ v: 1, dur: 250, ind: false }, lsJSON('santeh.demo.anim') || {}));
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const r = document.documentElement;
+    r.dataset.tabAnim = s.v; r.dataset.tabInd = s.ind ? 'on' : 'off'; r.style.setProperty('--tab-dur', s.dur + 'ms');
+    lsSet('santeh.demo.anim', JSON.stringify(s));
+  }, [s]);
+  const set = patch => setS(x => Object.assign({}, x, patch));
+  if (!open) return html`<button type="button" className="anim-demo-btn" onClick=${() => setOpen(true)}>Анимация ${s.v} · ${s.dur} мс</button>`;
+  return html`<div class="anim-demo">
+    ${ANIMS.map(([v, name, hint]) => html`<button type="button" key=${v} className=${'anim-opt' + (s.v === v ? ' on' : '')} onClick=${() => set({ v })}>
+      <b>${v}. ${name}</b><span>${hint}</span></button>`)}
+    <div class="anim-durs">${DURS.map(d => html`<button type="button" key=${d} className=${'chip' + (s.dur === d ? ' on' : '')} onClick=${() => set({ dur: d })}>${d} мс</button>`)}</div>
+    <label class="anim-ind"><input type="checkbox" checked=${s.ind} onChange=${e => set({ ind: e.target.checked })} /> Бегущая подсветка вкладки</label>
+    <button type="button" className="btn" onClick=${() => setOpen(false)}>Свернуть</button>
+  </div>`;
+}
+
+const TAB_ORDER = ['catalog', 'works', 'list'];
+
 /* ---------- Приложение ---------- */
 function App() {
   const [jobs, setJobs] = useState(() => loadJobs() || [exampleJob()]);
   const [currentId, setCurrentId] = useState(lsGet('santeh.current'));
   const [tab, setTab] = useState(() => { const t = lsGet('santeh.tab'); return t === 'list' || t === 'works' ? t : 'catalog'; });
+  // Смена вкладки с анимацией (View Transitions); без поддержки или при «уменьшить движение» — сразу.
+  // tabRef — вкладка, на которую уже переключаемся: состояние обновится только в следующем кадре
+  const tabRef = useRef(tab);
+  const changeTab = t => {
+    const from = tabRef.current;
+    if (t === from) return;
+    tabRef.current = t;
+    const go = () => { ReactDOM.flushSync(() => setTab(t)); window.scrollTo(0, 0); };
+    if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return go();
+    document.documentElement.dataset.tabDir = TAB_ORDER.indexOf(t) > TAB_ORDER.indexOf(from) ? 'fwd' : 'back';
+    // Быстрое повторное нажатие прерывает прошлую анимацию — это не ошибка
+    document.startViewTransition(go).ready.catch(() => {});
+  };
   const [query, setQuery] = useState('');
   const [workList, setWorkList] = useState(loadWorks);
   const [workQuery, setWorkQuery] = useState('');
@@ -674,7 +717,7 @@ function App() {
   function createJob(name, address) {
     const nj = { id: uid(), name, address, items: [], works: [], createdAt: Date.now(), updatedAt: Date.now() };
     setJobs(list => [nj].concat(list));
-    setCurrentId(nj.id); setSheet(null); setTab('catalog');
+    setCurrentId(nj.id); setSheet(null); tabRef.current = 'catalog'; setTab('catalog');
     say('Объект создан: ' + name);
   }
   function deleteJob(id) {
@@ -763,7 +806,7 @@ function App() {
           say('Вернули: ' + i.name);
         });
       }}
-      onClientText=${clientText} goWorks=${() => setTab('works')}
+      onClientText=${clientText} goWorks=${() => changeTab('works')}
       onEdit=${i => setSheet({ type: 'qty', part: PART_BY_ID[i.pid] || { id: i.pid, name: i.name, unit: i.unit, group: i.group, sizes: [i.size || ''], spec: '' }, size: i.size || '' })}
       onStep=${(i, d) => {
         const q = stepQty(i, d); setItem(i, q);
@@ -776,7 +819,7 @@ function App() {
         });
       }}
       onClear=${() => { updateJob(job.id, j => Object.assign({}, j, { items: [], works: [] })); say('Список очищен'); }}
-      onCopy=${copyText} onShare=${canShareText ? shareText : null} onExcel=${exportExcel} goCatalog=${() => setTab('catalog')} />`;
+      onCopy=${copyText} onShare=${canShareText ? shareText : null} onExcel=${exportExcel} goCatalog=${() => changeTab('catalog')} />`;
 
   if (locked && pinRec) return html`<${PinScreen} record=${pinRec} onUnlock=${unlock} />`;
 
@@ -803,11 +846,12 @@ function App() {
     <main>${content}</main>
 
     ${job ? html`<nav class="tabbar" aria-label="Разделы"><div class="in">
-      <button type="button" className="tab" aria-current=${tab === 'catalog' ? 'page' : undefined} onClick=${() => setTab('catalog')}><${IconBook} />Каталог</button>
-      <button type="button" className="tab" aria-current=${tab === 'works' ? 'page' : undefined} onClick=${() => setTab('works')}><${IconTool} />Работы</button>
-      <button type="button" className="tab" aria-current=${tab === 'list' ? 'page' : undefined} onClick=${() => setTab('list')}><${IconList} />Список
+      <button type="button" className="tab" aria-current=${tab === 'catalog' ? 'page' : undefined} onClick=${() => changeTab('catalog')}>${tab === 'catalog' ? html`<span class="ind"></span>` : null}<${IconBook} />Каталог</button>
+      <button type="button" className="tab" aria-current=${tab === 'works' ? 'page' : undefined} onClick=${() => changeTab('works')}>${tab === 'works' ? html`<span class="ind"></span>` : null}<${IconTool} />Работы</button>
+      <button type="button" className="tab" aria-current=${tab === 'list' ? 'page' : undefined} onClick=${() => changeTab('list')}>${tab === 'list' ? html`<span class="ind"></span>` : null}<${IconList} />Список
         ${listCount ? html`<span class="cnt">${listCount}</span>` : null}</button>
     </div></nav>` : null}
+    <${AnimDemo} />
 
     ${sheet && sheet.type === 'qty' && job ? html`<${QtySheet} key=${sheet.part.id + (sheet.size || '')} part=${sheet.part} job=${job} lockedSize=${sheet.size} readOnly=${false}
       onClose=${() => setSheet(null)}
