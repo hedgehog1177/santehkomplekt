@@ -191,10 +191,11 @@ a.btn { text-decoration: none; color: var(--fg); }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .scrim, .sheet, .toast, .toast-timer { animation: none; } }
 
-/* Смена вкладки (View Transitions): шапка и нижняя панель меняются сразу, анимируется только содержимое */
+/* Смена вкладки (View Transitions): строка объекта и нижняя панель меняются сразу, анимируется содержимое
+   вместе с поиском и разделами каталога (иначе поиск появляется поверх еще не погасшей страницы) */
 :root { --tab-dur: 250ms; --dx: 1; }
 :root[data-tab-dir="back"] { --dx: -1; }
-.top { view-transition-name: top; }
+.top-row { view-transition-name: top; }
 .tabbar { view-transition-name: tabbar; }
 .anim-demo, .anim-demo-btn { view-transition-name: anim-demo; }
 ::view-transition-group(top), ::view-transition-group(tabbar), ::view-transition-group(anim-demo),
