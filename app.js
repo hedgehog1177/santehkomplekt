@@ -573,36 +573,6 @@ function loadWorks() {
   return DEFAULT_WORKS.map(x => Object.assign({}, x));
 }
 
-/* ---------- ВРЕМЕННО: стенд выбора анимации смены вкладки (только в локальной ветке) ---------- */
-const ANIMS = [
-  [1, 'Кроссфейд', 'старое гаснет, новое проявляется одновременно'],
-  [2, 'Через затухание', 'сначала гаснет старое, потом проявляется новое с легким увеличением'],
-  [3, 'Сдвиг', 'новое въезжает на 30 px со стороны нажатой вкладки'],
-  [4, 'Подъем', 'новое поднимается снизу на 16 px'],
-  [5, 'Перелистывание', 'экраны сдвигаются целиком, как страницы'],
-];
-const DURS = [150, 250, 400, 600];
-function AnimDemo() {
-  const [s, setS] = useState(() => Object.assign({ v: 1, dur: 250, ind: false }, lsJSON('santeh.demo.anim') || {}));
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const r = document.documentElement;
-    r.dataset.tabAnim = s.v; r.dataset.tabInd = s.ind ? 'on' : 'off'; r.style.setProperty('--tab-dur', s.dur + 'ms');
-    lsSet('santeh.demo.anim', JSON.stringify(s));
-  }, [s]);
-  const set = patch => setS(x => Object.assign({}, x, patch));
-  if (!open) return html`<button type="button" className="anim-demo-btn" onClick=${() => setOpen(true)}>Анимация ${s.v} · ${s.dur} мс</button>`;
-  return html`<div class="anim-demo">
-    ${ANIMS.map(([v, name, hint]) => html`<button type="button" key=${v} className=${'anim-opt' + (s.v === v ? ' on' : '')} onClick=${() => set({ v })}>
-      <b>${v}. ${name}</b><span>${hint}</span></button>`)}
-    <div class="anim-durs">${DURS.map(d => html`<button type="button" key=${d} className=${'chip' + (s.dur === d ? ' on' : '')} onClick=${() => set({ dur: d })}>${d} мс</button>`)}</div>
-    <label class="anim-ind"><input type="checkbox" checked=${s.ind} onChange=${e => set({ ind: e.target.checked })} /> Бегущая подсветка вкладки</label>
-    <button type="button" className="btn" onClick=${() => setOpen(false)}>Свернуть</button>
-  </div>`;
-}
-
-const TAB_ORDER = ['catalog', 'works', 'list'];
-
 /* ---------- Приложение ---------- */
 function App() {
   const [jobs, setJobs] = useState(() => loadJobs() || [exampleJob()]);
@@ -612,12 +582,10 @@ function App() {
   // tabRef — вкладка, на которую уже переключаемся: состояние обновится только в следующем кадре
   const tabRef = useRef(tab);
   const changeTab = t => {
-    const from = tabRef.current;
-    if (t === from) return;
+    if (t === tabRef.current) return;
     tabRef.current = t;
     const go = () => { ReactDOM.flushSync(() => setTab(t)); window.scrollTo(0, 0); };
     if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return go();
-    document.documentElement.dataset.tabDir = TAB_ORDER.indexOf(t) > TAB_ORDER.indexOf(from) ? 'fwd' : 'back';
     const vt = document.startViewTransition(go);
     vtRef.current = vt;
     // Быстрое повторное нажатие прерывает прошлую анимацию — это не ошибка
@@ -873,7 +841,6 @@ function App() {
       <button type="button" className="tab" data-tab="list" aria-current=${tab === 'list' ? 'page' : undefined} onClick=${() => changeTab('list')}>${tab === 'list' ? html`<span class="ind"></span>` : null}<${IconList} />Список
         ${listCount ? html`<span class="cnt">${listCount}</span>` : null}</button>
     </div></nav>` : null}
-    <${AnimDemo} />
 
     ${sheet && sheet.type === 'qty' && job ? html`<${QtySheet} key=${sheet.part.id + (sheet.size || '')} part=${sheet.part} job=${job} lockedSize=${sheet.size} readOnly=${false}
       onClose=${() => setSheet(null)}
