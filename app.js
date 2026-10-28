@@ -578,6 +578,39 @@ function App() {
   const [jobs, setJobs] = useState(() => loadJobs() || [exampleJob()]);
   const [currentId, setCurrentId] = useState(lsGet('santeh.current'));
   const [tab, setTab] = useState(() => { const t = lsGet('santeh.tab'); return t === 'list' || t === 'works' ? t : 'catalog'; });
+  // Смена вкладки с анимацией (View Transitions); без поддержки или при «уменьшить движение» — сразу.
+  // tabRef — вкладка, на которую уже переключаемся: состояние обновится только в следующем кадре
+  const tabRef = useRef(tab);
+  const changeTab = t => {
+    if (t === tabRef.current) return;
+    tabRef.current = t;
+    const go = () => { ReactDOM.flushSync(() => setTab(t)); window.scrollTo(0, 0); };
+    if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return go();
+    const vt = document.startViewTransition(go);
+    vtRef.current = vt;
+    // Быстрое повторное нажатие прерывает прошлую анимацию — это не ошибка
+    vt.ready.catch(() => {});
+    vt.finished.finally(() => { if (vtRef.current === vt) vtRef.current = null; });
+  };
+  // Пока идет анимация, касания попадают в слой со снимками, а не в кнопки. Поэтому тап сам доводит
+  // анимацию до конца, а тап по месту вкладки еще и переключает на нее
+  const vtRef = useRef(null);
+  const changeTabRef = useRef(changeTab);
+  changeTabRef.current = changeTab;
+  useEffect(() => {
+    const onDown = e => {
+      const vt = vtRef.current;
+      if (!vt) return;
+      const hit = [...document.querySelectorAll('.tabbar .tab')].find(b => {
+        const r = b.getBoundingClientRect();
+        return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      });
+      vtRef.current = null; vt.skipTransition();
+      if (hit) changeTabRef.current(hit.dataset.tab);
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    return () => document.removeEventListener('pointerdown', onDown, true);
+  }, []);
   const [query, setQuery] = useState('');
   const [workList, setWorkList] = useState(loadWorks);
   const [workQuery, setWorkQuery] = useState('');
@@ -674,7 +707,7 @@ function App() {
   function createJob(name, address) {
     const nj = { id: uid(), name, address, items: [], works: [], createdAt: Date.now(), updatedAt: Date.now() };
     setJobs(list => [nj].concat(list));
-    setCurrentId(nj.id); setSheet(null); setTab('catalog');
+    setCurrentId(nj.id); setSheet(null); tabRef.current = 'catalog'; setTab('catalog');
     say('Объект создан: ' + name);
   }
   function deleteJob(id) {
@@ -763,7 +796,7 @@ function App() {
           say('Вернули: ' + i.name);
         });
       }}
-      onClientText=${clientText} goWorks=${() => setTab('works')}
+      onClientText=${clientText} goWorks=${() => changeTab('works')}
       onEdit=${i => setSheet({ type: 'qty', part: PART_BY_ID[i.pid] || { id: i.pid, name: i.name, unit: i.unit, group: i.group, sizes: [i.size || ''], spec: '' }, size: i.size || '' })}
       onStep=${(i, d) => {
         const q = stepQty(i, d); setItem(i, q);
@@ -776,7 +809,7 @@ function App() {
         });
       }}
       onClear=${() => { updateJob(job.id, j => Object.assign({}, j, { items: [], works: [] })); say('Список очищен'); }}
-      onCopy=${copyText} onShare=${canShareText ? shareText : null} onExcel=${exportExcel} goCatalog=${() => setTab('catalog')} />`;
+      onCopy=${copyText} onShare=${canShareText ? shareText : null} onExcel=${exportExcel} goCatalog=${() => changeTab('catalog')} />`;
 
   if (locked && pinRec) return html`<${PinScreen} record=${pinRec} onUnlock=${unlock} />`;
 
@@ -803,9 +836,9 @@ function App() {
     <main>${content}</main>
 
     ${job ? html`<nav class="tabbar" aria-label="Разделы"><div class="in">
-      <button type="button" className="tab" aria-current=${tab === 'catalog' ? 'page' : undefined} onClick=${() => setTab('catalog')}><${IconBook} />Каталог</button>
-      <button type="button" className="tab" aria-current=${tab === 'works' ? 'page' : undefined} onClick=${() => setTab('works')}><${IconTool} />Работы</button>
-      <button type="button" className="tab" aria-current=${tab === 'list' ? 'page' : undefined} onClick=${() => setTab('list')}><${IconList} />Список
+      <button type="button" className="tab" data-tab="catalog" aria-current=${tab === 'catalog' ? 'page' : undefined} onClick=${() => changeTab('catalog')}>${tab === 'catalog' ? html`<span class="ind"></span>` : null}<${IconBook} />Каталог</button>
+      <button type="button" className="tab" data-tab="works" aria-current=${tab === 'works' ? 'page' : undefined} onClick=${() => changeTab('works')}>${tab === 'works' ? html`<span class="ind"></span>` : null}<${IconTool} />Работы</button>
+      <button type="button" className="tab" data-tab="list" aria-current=${tab === 'list' ? 'page' : undefined} onClick=${() => changeTab('list')}>${tab === 'list' ? html`<span class="ind"></span>` : null}<${IconList} />Список
         ${listCount ? html`<span class="cnt">${listCount}</span>` : null}</button>
     </div></nav>` : null}
 
